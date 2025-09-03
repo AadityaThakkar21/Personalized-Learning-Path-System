@@ -75,3 +75,39 @@ for i in range(subjects):
         x = pulp.value(x2[i])
         x = round(x * 2) / 2
         print(f"Study {names[i]} for {x} hours (Priority {priorities[i]})")
+
+alpha = 0.1  
+iterations = 1000
+
+hours_alloc = np.full(subjects, hours/subjects)  
+def utility(h, p):
+    return p * np.log(1 + h)
+
+def grad(h, p):
+    return p / (1 + h)  
+
+for _ in range(iterations):
+    gradients = np.array([grad(hours_alloc[i], priorities[i]) for i in range(subjects)])
+    hours_alloc = hours_alloc + alpha * gradients  
+    
+    # project back to feasible region
+    if np.sum(hours_alloc) > hours:
+        hours_alloc = hours_alloc * (hours / np.sum(hours_alloc))
+    hours_alloc = np.clip(hours_alloc, 0.5, None)  
+
+print("\nGradient Descent-Based Study Plan (Nonlinear Utility)")
+for i in range(subjects):
+    print(f"Study {names[i]} for {round(hours_alloc[i], 1)} hours (Priority {priorities[i]})")
+
+def classify_critical_points(p):
+    # U(h) = p * ln(1+h)
+    # U'(h) = p/(1+h)
+    # U''(h) = -p/(1+h)^2 (always negative)
+    return "Local Maximum (concave function)"
+
+print("\nCritical Point Analysis")
+for i in range(subjects):
+    print(f"{names[i]}: {classify_critical_points(priorities[i])}")
+
+
+
