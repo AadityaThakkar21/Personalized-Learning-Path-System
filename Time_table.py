@@ -1,3 +1,5 @@
+import pulp
+
 hours = float(input("Enter the number of free hours you have today \n"))
 subjects = int(input("Enter the number of subjects you wish to cover \n"))
 
@@ -88,3 +90,4 @@ for i in range(subjects):
         else:
             x = temp
         print(f"Study {names[i]} for {x} hours (Priority {priorities[i]})")
+
