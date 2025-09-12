@@ -11,6 +11,10 @@ class AdaptiveLeaderboard:
         # Difficulty ordering (used for target ranking)
         self.difficulty_map = {"Easy": 0, "Intermediate": 1, "Hard": 2}
 
+    def load_quiz_data(self, file_path):
+        """Load quiz results from CSV file."""
+        self.data = pd.read_csv(file_path)
+
     def add_quiz_result(self, userid, subject, score, difficulty):
         """Add new quiz result to the system."""
         new_entry = {"userid": userid, "subject": subject, "score": score, "difficulty": difficulty}
@@ -67,17 +71,12 @@ class AdaptiveLeaderboard:
         return self.weights
 
 
-# ---------------- Example Usage ----------------
 if __name__ == "__main__":
     lb = AdaptiveLeaderboard()
 
-    # Add quiz results (userid starts from 101)
-    lb.add_quiz_result(101, "Optimization", 80, "Easy")
-    lb.add_quiz_result(102, "Optimization", 90, "Intermediate")
-    lb.add_quiz_result(101, "GameTheory", 70, "Hard")
-    lb.add_quiz_result(103, "GameTheory", 85, "Intermediate")
-    lb.add_quiz_result(102, "Transportation", 75, "Hard")
-    lb.add_quiz_result(103, "Transportation", 65, "Easy")
+    # Load quiz results from external file
+    lb.load_quiz_data("quiz_data.csv")
+
 
 
     print("\n📊 Subject Leaderboard: Optimization")
