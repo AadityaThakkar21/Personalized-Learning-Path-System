@@ -1,0 +1,61 @@
+Subject,Difficulty,Question,Option1,Option2,Option3,Option4,Answer
+Maths,Easy,What is 5 + 3?,6,7,8,9,8
+Maths,Easy,What is 9 - 4?,3,4,5,6,5
+Maths,Easy,What is 6 × 2?,8,10,12,14,12
+Maths,Easy,What is 12 ÷ 3?,2,3,4,6,4
+Maths,Easy,What is 10 - 7?,1,2,3,4,3
+Maths,Intermediate,Solve: 15 × 2 - 10,10,20,25,30,20
+Maths,Intermediate,What is the square root of 49?,5,6,7,8,7
+Maths,Intermediate,Solve: 2x = 10 → x=?,2,4,5,10,5
+Maths,Intermediate,What is 3² + 4²?,12,24,25,30,25
+Maths,Intermediate,Solve: 3x = 21 → x=?,5,6,7,8,7
+Maths,Hard,If 2x + 3 = 11, what is x?,3,4,5,6,4
+Maths,Hard,What is (10² - 36) ÷ 2?,16,32,64,82,32
+Maths,Hard,Solve: 5x - 7 = 18 → x=?,3,4,5,7,5
+Maths,Hard,What is the LCM of 12 and 15?,30,45,60,90,60
+Maths,Hard,If x^2 = 49, what is x?,5,6,7,8,7
+Science,Easy,Water freezes at?,0°C,50°C,100°C,25°C,0°C
+Science,Easy,Which planet is known as the Red Planet?,Earth,Mars,Jupiter,Saturn,Mars
+Science,Easy,Which gas do humans breathe in?,Oxygen,Carbon dioxide,Nitrogen,Helium,Oxygen
+Science,Easy,Which part of the plant makes food?,Root,Stem,Leaf,Flower,Leaf
+Science,Easy,Humans primarily need which gas to live?,Oxygen,Carbon dioxide,Helium,Argon,Oxygen
+Science,Intermediate,What is H2O?,Oxygen,Water,Hydrogen,Salt,Water
+Science,Intermediate,Which organ pumps blood?,Liver,Brain,Heart,Kidney,Heart
+Science,Intermediate,What is the boiling point of water?,50°C,100°C,150°C,200°C,100°C
+Science,Intermediate,What gas do plants release during photosynthesis?,Oxygen,Carbon dioxide,Hydrogen,Nitrogen,Oxygen
+Science,Intermediate,What is common salt (NaCl)?,Salt,Sugar,Water,Alcohol,Salt
+Science,Hard,What is the chemical symbol for Iron?,Ir,In,Fe,I,Fe
+Science,Hard,Who proposed the theory of relativity?,Newton,Einstein,Bohr,Darwin,Einstein
+Science,Hard,Which vitamin is produced when sunlight hits the skin?,A,B,C,D,D
+Science,Hard,What is the powerhouse of the cell?,Nucleus,Ribosome,Mitochondria,Chloroplast,Mitochondria
+Science,Hard,SI unit of electric current?,Ampere,Volt,Ohm,Watt,Ampere
+Social Studies,Easy,Who was the first President of the USA?,Abraham Lincoln,George Washington,John Adams,Thomas Jefferson,George Washington
+Social Studies,Easy,Which continent is India in?,Asia,Europe,Africa,Australia,Asia
+Social Studies,Easy,Who is known as the Father of the Nation in India?,Jawaharlal Nehru,Mahatma Gandhi,Subhas Chandra Bose,B. R. Ambedkar,Mahatma Gandhi
+Social Studies,Easy,Taj Mahal is located in?,Delhi,Agra,Jaipur,Mumbai,Agra
+Social Studies,Easy,Capital of France?,Paris,London,Berlin,Rome,Paris
+Social Studies,Intermediate,In which year did India gain independence?,1945,1947,1950,1960,1947
+Social Studies,Intermediate,Who wrote the Constitution of India?,B. R. Ambedkar,M. Gandhi,J. Nehru,S. Patel,B. R. Ambedkar
+Social Studies,Intermediate,Which country is known as the Land of the Rising Sun?,China,Japan,Thailand,Korea,Japan
+Social Studies,Intermediate,The Great Wall is located in?,India,China,Japan,Korea,China
+Social Studies,Intermediate,The Indian Parliament consists of?,Lok Sabha and Rajya Sabha,President only,Supreme Court,State Assemblies,Lok Sabha and Rajya Sabha
+Social Studies,Hard,World War II ended in?,1942,1945,1947,1950,1945
+Social Studies,Hard,Who discovered America?,Columbus,Magellan,Vasco da Gama,Cook,Columbus
+Social Studies,Hard,Who was the first Prime Minister of India?,M. Gandhi,B. R. Ambedkar,J. Nehru,S. Patel,J. Nehru
+Social Studies,Hard,French Revolution began in?,1789,1800,1815,1857,1789
+Social Studies,Hard,The Cold War was mainly between?,USA and USSR,France and Germany,India and China,UK and Spain,USA and USSR
+English,Easy,What is the plural of 'child'?,childs,childes,children,child,children
+English,Easy,Which is a noun?,run,blue,dog,quickly,dog
+English,Easy,Which is a vowel?,b,c,a,t,a
+English,Easy,Choose the correct spelling:,recieve,receive,receeve,receve,receive
+English,Easy,Choose the correct article: __ umbrella,a,an,the,none,an
+English,Intermediate,Synonym of 'happy'?,sad,joyful,angry,tired,joyful
+English,Intermediate,Antonym of 'big'?,large,huge,small,giant,small
+English,Intermediate,Choose correct verb: She ___ going.,is,are,am,be,is
+English,Intermediate,Which is an adjective?,slowly,happy,run,eat,happy
+English,Intermediate,Antonym of 'begin'?,start,commence,end,open,end
+English,Hard,Past tense of 'go'?,goed,went,gone,going,went
+English,Hard,What is a synonym of 'ancient'?,modern,old,new,recent,old
+English,Hard,Which sentence is correct?,He go to school,He goes to school,He going to school,He gone to school,He goes to school
+English,Hard,Antonym of 'truth'?,false,lie,fake,falsehood,lie
+English,Hard,Correct usage: If I ___ you, I'd wait.,am,was,were,be,were
