@@ -15,7 +15,7 @@ The goal is to optimize the learning process through personalized recommendation
 - Python libraries like pulp, pandas, etc
 
 ## Group Members
-- 202301408	Vraj Patel	
+- 202301408	Vraj Patel (Leader)
 - 202301417	Aaditya Thakkar	
 - 202301114	Yogesh Bagotia	
 - 202301065	Vansh padaliya	
