@@ -1,61 +1,211 @@
 Subject,Difficulty,Question,Option1,Option2,Option3,Option4,Answer
-Maths,Easy,What is 5 + 3?,6,7,8,9,8
-Maths,Easy,What is 9 - 4?,3,4,5,6,5
-Maths,Easy,What is 6 × 2?,8,10,12,14,12
-Maths,Easy,What is 12 ÷ 3?,2,3,4,6,4
-Maths,Easy,What is 10 - 7?,1,2,3,4,3
-Maths,Intermediate,Solve: 15 × 2 - 10,10,20,25,30,20
-Maths,Intermediate,What is the square root of 49?,5,6,7,8,7
-Maths,Intermediate,Solve: 2x = 10 → x=?,2,4,5,10,5
-Maths,Intermediate,What is 3² + 4²?,12,24,25,30,25
-Maths,Intermediate,Solve: 3x = 21 → x=?,5,6,7,8,7
-Maths,Hard,If 2x + 3 = 11, what is x?,3,4,5,6,4
-Maths,Hard,What is (10² - 36) ÷ 2?,16,32,64,82,32
-Maths,Hard,Solve: 5x - 7 = 18 → x=?,3,4,5,7,5
-Maths,Hard,What is the LCM of 12 and 15?,30,45,60,90,60
-Maths,Hard,If x^2 = 49, what is x?,5,6,7,8,7
-Science,Easy,Water freezes at?,0°C,50°C,100°C,25°C,0°C
-Science,Easy,Which planet is known as the Red Planet?,Earth,Mars,Jupiter,Saturn,Mars
-Science,Easy,Which gas do humans breathe in?,Oxygen,Carbon dioxide,Nitrogen,Helium,Oxygen
-Science,Easy,Which part of the plant makes food?,Root,Stem,Leaf,Flower,Leaf
-Science,Easy,Humans primarily need which gas to live?,Oxygen,Carbon dioxide,Helium,Argon,Oxygen
-Science,Intermediate,What is H2O?,Oxygen,Water,Hydrogen,Salt,Water
-Science,Intermediate,Which organ pumps blood?,Liver,Brain,Heart,Kidney,Heart
-Science,Intermediate,What is the boiling point of water?,50°C,100°C,150°C,200°C,100°C
-Science,Intermediate,What gas do plants release during photosynthesis?,Oxygen,Carbon dioxide,Hydrogen,Nitrogen,Oxygen
-Science,Intermediate,What is common salt (NaCl)?,Salt,Sugar,Water,Alcohol,Salt
-Science,Hard,What is the chemical symbol for Iron?,Ir,In,Fe,I,Fe
-Science,Hard,Who proposed the theory of relativity?,Newton,Einstein,Bohr,Darwin,Einstein
-Science,Hard,Which vitamin is produced when sunlight hits the skin?,A,B,C,D,D
-Science,Hard,What is the powerhouse of the cell?,Nucleus,Ribosome,Mitochondria,Chloroplast,Mitochondria
-Science,Hard,SI unit of electric current?,Ampere,Volt,Ohm,Watt,Ampere
-Social Studies,Easy,Who was the first President of the USA?,Abraham Lincoln,George Washington,John Adams,Thomas Jefferson,George Washington
-Social Studies,Easy,Which continent is India in?,Asia,Europe,Africa,Australia,Asia
-Social Studies,Easy,Who is known as the Father of the Nation in India?,Jawaharlal Nehru,Mahatma Gandhi,Subhas Chandra Bose,B. R. Ambedkar,Mahatma Gandhi
-Social Studies,Easy,Taj Mahal is located in?,Delhi,Agra,Jaipur,Mumbai,Agra
-Social Studies,Easy,Capital of France?,Paris,London,Berlin,Rome,Paris
-Social Studies,Intermediate,In which year did India gain independence?,1945,1947,1950,1960,1947
-Social Studies,Intermediate,Who wrote the Constitution of India?,B. R. Ambedkar,M. Gandhi,J. Nehru,S. Patel,B. R. Ambedkar
-Social Studies,Intermediate,Which country is known as the Land of the Rising Sun?,China,Japan,Thailand,Korea,Japan
-Social Studies,Intermediate,The Great Wall is located in?,India,China,Japan,Korea,China
-Social Studies,Intermediate,The Indian Parliament consists of?,Lok Sabha and Rajya Sabha,President only,Supreme Court,State Assemblies,Lok Sabha and Rajya Sabha
-Social Studies,Hard,World War II ended in?,1942,1945,1947,1950,1945
-Social Studies,Hard,Who discovered America?,Columbus,Magellan,Vasco da Gama,Cook,Columbus
-Social Studies,Hard,Who was the first Prime Minister of India?,M. Gandhi,B. R. Ambedkar,J. Nehru,S. Patel,J. Nehru
-Social Studies,Hard,French Revolution began in?,1789,1800,1815,1857,1789
-Social Studies,Hard,The Cold War was mainly between?,USA and USSR,France and Germany,India and China,UK and Spain,USA and USSR
-English,Easy,What is the plural of 'child'?,childs,childes,children,child,children
-English,Easy,Which is a noun?,run,blue,dog,quickly,dog
-English,Easy,Which is a vowel?,b,c,a,t,a
-English,Easy,Choose the correct spelling:,recieve,receive,receeve,receve,receive
-English,Easy,Choose the correct article: __ umbrella,a,an,the,none,an
-English,Intermediate,Synonym of 'happy'?,sad,joyful,angry,tired,joyful
-English,Intermediate,Antonym of 'big'?,large,huge,small,giant,small
-English,Intermediate,Choose correct verb: She ___ going.,is,are,am,be,is
-English,Intermediate,Which is an adjective?,slowly,happy,run,eat,happy
-English,Intermediate,Antonym of 'begin'?,start,commence,end,open,end
-English,Hard,Past tense of 'go'?,goed,went,gone,going,went
-English,Hard,What is a synonym of 'ancient'?,modern,old,new,recent,old
-English,Hard,Which sentence is correct?,He go to school,He goes to school,He going to school,He gone to school,He goes to school
-English,Hard,Antonym of 'truth'?,false,lie,fake,falsehood,lie
-English,Hard,Correct usage: If I ___ you, I'd wait.,am,was,were,be,were
+Maths,Easy,What is 18 + 9?,27,28,29,26,27
+Maths,Easy,What is 16 + 22?,38,37,40,39,38
+Maths,Easy,What is 21 + 49?,72,71,70,69,70
+Maths,Easy,What is 27 + 1?,27,28,30,29,28
+Maths,Easy,What is 1 + 15?,16,17,15,18,16
+Maths,Easy,What is 4 + 1?,7,5,6,4,5
+Maths,Easy,What is 2 + 5?,9,8,6,7,7
+Maths,Easy,What is 44 + 6?,52,50,49,51,50
+Maths,Easy,What is 23 + 18?,40,42,41,43,41
+Maths,Easy,What is 7 + 49?,57,55,56,58,56
+Maths,Easy,What is 26 + 49?,74,75,76,77,75
+Maths,Easy,What is 15 + 7?,23,24,22,21,22
+Maths,Easy,What is 49 + 15?,66,64,63,65,64
+Maths,Easy,What is 11 + 14?,27,24,25,26,25
+Maths,Easy,What is 16 + 40?,57,55,56,58,56
+Maths,Easy,What is 24 + 15?,41,40,38,39,39
+Maths,Easy,What is 9 + 7?,16,18,15,17,16
+Maths,Easy,What is 3 + 38?,43,41,42,40,41
+Maths,Easy,What is 35 + 6?,41,42,40,43,41
+Maths,Easy,What is 44 + 49?,92,95,94,93,93
+Maths,Easy,What is 15 + 39?,55,56,53,54,54
+Maths,Easy,What is 48 + 18?,67,65,66,68,66
+Maths,Easy,What is 50 + 14?,63,66,65,64,64
+Maths,Easy,What is 25 + 36?,62,61,60,63,61
+Maths,Easy,What is 36 + 29?,66,65,64,67,65
+Maths,Easy,What is 30 + 26?,56,55,57,58,56
+Maths,Easy,What is 48 + 37?,84,86,87,85,85
+Maths,Easy,What is 40 + 22?,63,61,62,64,62
+Maths,Easy,What is 39 + 43?,83,81,84,82,82
+Maths,Easy,What is 47 + 37?,83,86,85,84,84
+Maths,Easy,What is 50 + 14?,66,64,63,65,64
+Maths,Easy,What is 27 + 47?,74,73,75,76,74
+Maths,Easy,What is 41 + 24?,65,64,66,67,65
+Maths,Easy,What is 5 + 16?,22,21,20,23,21
+Maths,Easy,What is 46 + 45?,91,93,90,92,91
+Maths,Easy,What is 14 + 1?,17,16,14,15,15
+Maths,Easy,What is 17 + 13?,32,31,30,29,30
+Maths,Easy,What is 14 + 25?,38,41,40,39,39
+Maths,Easy,What is 18 + 9?,27,28,29,26,27
+Maths,Easy,What is 28 + 45?,72,73,75,74,73
+Maths,Intermediate,What is 4 × 7?,29,27,30,28,28
+Maths,Intermediate,What is 18 × 19?,343,344,341,342,342
+Maths,Intermediate,What is 20 × 14?,279,280,281,282,280
+Maths,Intermediate,What is 6 × 10?,60,62,59,61,60
+Maths,Intermediate,What is 7 × 13?,90,93,92,91,91
+Maths,Intermediate,What is 5 × 2?,9,12,10,11,10
+Maths,Intermediate,What is 5 × 20?,101,99,100,102,100
+Maths,Intermediate,What is 13 × 18?,236,233,235,234,234
+Maths,Intermediate,What is 13 × 11?,143,145,142,144,143
+Maths,Intermediate,What is 7 × 19?,132,135,134,133,133
+Maths,Intermediate,What is 11 × 14?,154,153,156,155,154
+Maths,Intermediate,What is 6 × 16?,96,95,97,98,96
+Maths,Intermediate,What is 3 × 3?,8,9,10,11,9
+Maths,Intermediate,What is 12 × 13?,158,157,155,156,156
+Maths,Intermediate,What is 20 × 8?,161,162,160,159,160
+Maths,Intermediate,What is 10 × 3?,30,32,31,29,30
+Maths,Intermediate,What is 4 × 9?,38,36,35,37,36
+Maths,Intermediate,What is 7 × 18?,127,128,125,126,126
+Maths,Intermediate,What is 7 × 5?,37,35,34,36,35
+Maths,Intermediate,What is 12 × 15?,179,180,182,181,180
+Maths,Intermediate,What is 19 × 12?,227,230,229,228,228
+Maths,Intermediate,What is 5 × 18?,92,91,89,90,90
+Maths,Intermediate,What is 5 × 5?,27,24,26,25,25
+Maths,Intermediate,What is 6 × 5?,30,31,32,29,30
+Maths,Intermediate,What is 8 × 4?,33,31,34,32,32
+Maths,Intermediate,What is 3 × 11?,33,32,35,34,33
+Maths,Intermediate,What is 16 × 5?,80,82,79,81,80
+Maths,Intermediate,What is 20 × 13?,260,259,261,262,260
+Maths,Intermediate,What is 20 × 7?,140,141,142,139,140
+Maths,Intermediate,What is 12 × 5?,60,59,62,61,60
+Maths,Intermediate,What is 13 × 4?,54,51,52,53,52
+Maths,Intermediate,What is 2 × 18?,35,37,38,36,36
+Maths,Intermediate,What is 5 × 7?,37,34,35,36,35
+Maths,Intermediate,What is 16 × 7?,112,111,114,113,112
+Maths,Intermediate,What is 17 × 12?,203,205,206,204,204
+Maths,Intermediate,What is 15 × 2?,30,32,31,29,30
+Maths,Intermediate,What is 10 × 4?,42,40,41,39,40
+Maths,Intermediate,What is 3 × 6?,20,17,19,18,18
+Maths,Intermediate,What is 6 × 3?,18,17,20,19,18
+Maths,Intermediate,What is 3 × 7?,21,22,23,20,21
+Maths,Hard,Solve for x: 8x = 96,13,12,14,11,12
+Maths,Hard,Solve for x: 6x = 84,15,16,14,13,14
+Maths,Hard,Solve for x: 10x = 190,21,18,20,19,19
+Maths,Hard,Solve for x: 8x = 48,7,6,8,5,6
+Maths,Hard,Solve for x: 4x = 44,11,10,13,12,11
+Maths,Hard,Solve for x: 6x = 66,13,12,11,10,11
+Maths,Hard,Solve for x: 9x = 54,7,8,6,5,6
+Maths,Hard,Solve for x: 7x = 112,16,15,18,17,16
+Maths,Hard,Solve for x: 10x = 70,6,9,8,7,7
+Maths,Hard,Solve for x: 9x = 45,7,4,6,5,5
+Maths,Hard,Solve for x: 4x = 48,13,11,12,14,12
+Maths,Hard,Solve for x: 4x = 24,6,5,8,7,6
+Maths,Hard,Solve for x: 2x = 20,9,10,11,12,10
+Maths,Hard,Solve for x: 6x = 30,7,4,5,6,5
+Maths,Hard,Solve for x: 2x = 32,16,15,17,18,16
+Maths,Hard,Solve for x: 9x = 108,13,14,11,12,12
+Maths,Hard,Solve for x: 3x = 15,4,6,7,5,5
+Maths,Hard,Solve for x: 4x = 80,20,22,21,19,20
+Maths,Hard,Solve for x: 4x = 72,19,18,17,20,18
+Maths,Hard,Solve for x: 3x = 54,17,19,18,20,18
+Maths,Hard,Solve for x: 4x = 48,11,14,12,13,12
+Maths,Hard,Solve for x: 7x = 35,4,5,6,7,5
+Maths,Hard,Solve for x: 9x = 63,7,6,8,9,7
+Maths,Hard,Solve for x: 3x = 15,5,4,6,7,5
+Maths,Hard,Solve for x: 8x = 136,19,16,18,17,17
+Maths,Hard,Solve for x: 7x = 49,8,7,9,6,7
+Maths,Hard,Solve for x: 5x = 100,21,19,22,20,20
+Maths,Hard,Solve for x: 3x = 6,3,4,2,1,2
+Maths,Hard,Solve for x: 3x = 30,12,11,10,9,10
+Maths,Hard,Solve for x: 4x = 52,15,14,12,13,13
+Maths,Hard,Solve for x: 10x = 40,3,5,6,4,4
+Maths,Hard,Solve for x: 10x = 100,11,12,9,10,10
+Maths,Hard,Solve for x: 9x = 153,16,19,17,18,17
+Maths,Hard,Solve for x: 7x = 21,2,4,5,3,3
+Maths,Hard,Solve for x: 7x = 133,18,19,20,21,19
+Maths,Hard,Solve for x: 6x = 102,18,19,16,17,17
+Maths,Hard,Solve for x: 3x = 18,7,8,5,6,6
+Maths,Hard,Solve for x: 2x = 32,15,17,18,16,16
+Maths,Hard,Solve for x: 3x = 9,3,4,2,5,3
+Maths,Hard,Solve for x: 4x = 8,2,3,1,4,2
+Science,Easy,What planet is known as the Red Planet?,Mars,Jupiter,Venus,Saturn,Mars
+Science,Easy,What planet is known as the Red Planet?,Venus,Jupiter,Saturn,Mars,Mars
+Science,Easy,What planet is known as the Red Planet?,Mars,Venus,Saturn,Jupiter,Mars
+Science,Easy,What part of plant makes food?,Root,Flower,Leaf,Stem,Leaf
+Science,Easy,What planet is known as the Red Planet?,Saturn,Mars,Venus,Jupiter,Mars
+Science,Easy,Which gas do humans breathe in?,Oxygen,Nitrogen,Helium,Carbon dioxide,Oxygen
+Science,Easy,Water freezes at?,32°C,0°C,50°C,100°C,0°C
+Science,Easy,What planet is known as the Red Planet?,Jupiter,Venus,Saturn,Mars,Mars
+Science,Easy,What planet is known as the Red Planet?,Jupiter,Venus,Mars,Saturn,Mars
+Science,Easy,Water freezes at?,50°C,100°C,0°C,32°C,0°C
+Science,Intermediate,Which organ pumps blood?,Kidney,Heart,Lungs,Brain,Heart
+Science,Intermediate,Earth revolves around?,Moon,Sun,Mars,Stars,Sun
+Science,Intermediate,Earth revolves around?,Moon,Sun,Mars,Stars,Sun
+Science,Intermediate,Which vitamin from sunlight?,D,A,B,C,D
+Science,Intermediate,Which organ pumps blood?,Brain,Heart,Lungs,Kidney,Heart
+Science,Intermediate,Which vitamin from sunlight?,D,C,A,B,D
+Science,Intermediate,Earth revolves around?,Stars,Moon,Mars,Sun,Sun
+Science,Intermediate,Which organ pumps blood?,Kidney,Heart,Lungs,Brain,Heart
+Science,Intermediate,Boiling point of water (°C)?,150,50,200,100,100
+Science,Intermediate,Which vitamin from sunlight?,C,A,B,D,D
+Science,Hard,Who proposed relativity?,Einstein,Newton,Darwin,Bohr,Einstein
+Science,Hard,pH of neutral solution?,0,7,10,14,7
+Science,Hard,Who proposed relativity?,Bohr,Darwin,Einstein,Newton,Einstein
+Science,Hard,Speed of light (m/s)?,3×10^6,3×10^5,3×10^8,3×10^7,3×10^8
+Science,Hard,pH of neutral solution?,7,14,0,10,7
+Science,Hard,Speed of light (m/s)?,3×10^5,3×10^7,3×10^6,3×10^8,3×10^8
+Science,Hard,Symbol for Sodium?,So,S,K,Na,Na
+Science,Hard,pH of neutral solution?,7,10,0,14,7
+Science,Hard,pH of neutral solution?,10,14,0,7,7
+Science,Hard,Symbol for Sodium?,S,K,So,Na,Na
+Social Studies,Easy,Who was first President of USA?,Adams,Abraham Lincoln,Jefferson,George Washington,George Washington
+Social Studies,Easy,Father of Nation India?,Ambedkar,Nehru,Bose,Mahatma Gandhi,Mahatma Gandhi
+Social Studies,Easy,Where is Taj Mahal?,Jaipur,Lucknow,Agra,Delhi,Agra
+Social Studies,Easy,Father of Nation India?,Bose,Mahatma Gandhi,Nehru,Ambedkar,Mahatma Gandhi
+Social Studies,Easy,Father of Nation India?,Bose,Nehru,Ambedkar,Mahatma Gandhi,Mahatma Gandhi
+Social Studies,Easy,Who was first President of USA?,Jefferson,Abraham Lincoln,Adams,George Washington,George Washington
+Social Studies,Easy,India is in which continent?,Europe,Australia,Africa,Asia,Asia
+Social Studies,Easy,Who was first President of USA?,George Washington,Jefferson,Adams,Abraham Lincoln,George Washington
+Social Studies,Easy,Father of Nation India?,Ambedkar,Nehru,Bose,Mahatma Gandhi,Mahatma Gandhi
+Social Studies,Easy,India is in which continent?,Africa,Europe,Asia,Australia,Asia
+Social Studies,Intermediate,Constitution father of India?,Gandhi,Patel,Nehru,B. R. Ambedkar,B. R. Ambedkar
+Social Studies,Intermediate,Great Wall is in?,Korea,Japan,China,India,China
+Social Studies,Intermediate,Constitution father of India?,Gandhi,Patel,Nehru,B. R. Ambedkar,B. R. Ambedkar
+Social Studies,Intermediate,India got independence in?,1960,1947,1945,1950,1947
+Social Studies,Intermediate,India got independence in?,1960,1947,1945,1950,1947
+Social Studies,Intermediate,Great Wall is in?,India,Japan,China,Korea,China
+Social Studies,Intermediate,Great Wall is in?,Japan,Korea,India,China,China
+Social Studies,Intermediate,Great Wall is in?,China,India,Japan,Korea,China
+Social Studies,Intermediate,India got independence in?,1945,1960,1947,1950,1947
+Social Studies,Intermediate,India got independence in?,1947,1945,1950,1960,1947
+Social Studies,Hard,First Indian PM?,J. Nehru,Patel,Ambedkar,Rajendra Prasad,J. Nehru
+Social Studies,Hard,First Indian PM?,J. Nehru,Rajendra Prasad,Ambedkar,Patel,J. Nehru
+Social Studies,Hard,World War II ended in?,1950,1960,1942,1945,1945
+Social Studies,Hard,Who discovered America?,Columbus,Cook,Vasco da Gama,Magellan,Columbus
+Social Studies,Hard,French Revolution started in?,1857,1776,1800,1789,1789
+Social Studies,Hard,First Indian PM?,Ambedkar,Patel,J. Nehru,Rajendra Prasad,J. Nehru
+Social Studies,Hard,Who discovered America?,Vasco da Gama,Magellan,Cook,Columbus,Columbus
+Social Studies,Hard,World War II ended in?,1950,1960,1945,1942,1945
+Social Studies,Hard,French Revolution started in?,1789,1800,1857,1776,1789
+Social Studies,Hard,Who discovered America?,Magellan,Cook,Columbus,Vasco da Gama,Columbus
+English,Easy,Plural of child?,child,childes,children,childs,children
+English,Easy,Plural of child?,children,child,childs,childes,children
+English,Easy,Plural of child?,child,childes,children,childs,children
+English,Easy,Plural of child?,child,children,childes,childs,children
+English,Easy,Which is a vowel?,t,a,c,b,a
+English,Easy,Correct spelling?,receive,receve,receeve,recieve,receive
+English,Easy,Which is a vowel?,t,a,b,c,a
+English,Easy,Plural of child?,childs,childes,child,children,children
+English,Easy,Plural of child?,child,childs,children,childes,children
+English,Easy,Plural of child?,children,childes,child,childs,children
+English,Intermediate,Synonym of happy?,sad,angry,joyful,tired,joyful
+English,Intermediate,Synonym of happy?,sad,angry,tired,joyful,joyful
+English,Intermediate,Synonym of happy?,tired,sad,joyful,angry,joyful
+English,Intermediate,Which is an adjective?,eat,slowly,happy,run,happy
+English,Intermediate,Antonym of big?,giant,large,huge,small,small
+English,Intermediate,Antonym of big?,large,giant,small,huge,small
+English,Intermediate,Past tense of go?,goed,going,gone,went,went
+English,Intermediate,Synonym of happy?,joyful,angry,tired,sad,joyful
+English,Intermediate,Which is an adjective?,run,eat,happy,slowly,happy
+English,Intermediate,Past tense of go?,goed,going,gone,went,went
+English,Hard,Plural of mouse?,mouse,mouses,mice,mous,mice
+English,Hard,Identify adverb: He ran quickly.,quickly,he,none,ran,quickly
+English,Hard,Identify adverb: He ran quickly.,ran,he,quickly,none,quickly
+English,Hard,Plural of mouse?,mouses,mice,mous,mouse,mice
+English,Hard,Opposite of optimistic?,cheerful,positive,hopeful,pessimistic,pessimistic
+English,Hard,Identify adverb: He ran quickly.,ran,none,quickly,he,quickly
+English,Hard,Opposite of optimistic?,cheerful,positive,pessimistic,hopeful,pessimistic
+English,Hard,Identify adverb: He ran quickly.,he,ran,none,quickly,quickly
+English,Hard,Opposite of optimistic?,hopeful,cheerful,positive,pessimistic,pessimistic
+English,Hard,Opposite of optimistic?,hopeful,cheerful,positive,pessimistic,pessimistic
