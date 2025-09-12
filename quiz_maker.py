@@ -1,6 +1,8 @@
 import csv
 import random
 import sys
+import os
+from datetime import datetime
 
 """
 ===================================================
@@ -16,15 +18,18 @@ Optimization Concepts Applied:
 
 # Configuration
 QUESTIONS_PER_QUIZ = 5
+DEFAULT_DATASET = "quiz_data.csv"  # You can point this to a Kaggle-exported CSV with the same columns
+RESULTS_CSV = "quiz_results.csv"
 
 # ---------------------------
 # Load quiz data from CSV
 # ---------------------------
 
-def load_quiz_data(filename="quiz_data.csv"):
+def load_quiz_data(filename: str):
 	quiz_data = {}
 	with open(filename, newline="", encoding="utf-8") as csvfile:
 		reader = csv.DictReader(csvfile)
+		# Expecting columns: Subject,Difficulty,Question,Option1,Option2,Option3,Option4,Answer
 		for row in reader:
 			subject = row["Subject"].title()
 			difficulty = row["Difficulty"].title()
@@ -70,6 +75,32 @@ def red(text):
 
 
 # ---------------------------
+# Results logging
+# ---------------------------
+
+def ensure_results_header(path: str):
+	if not os.path.exists(path) or os.path.getsize(path) == 0:
+		with open(path, "w", newline="", encoding="utf-8") as f:
+			writer = csv.writer(f)
+			writer.writerow(["timestamp", "user_id", "subject", "difficulty", "score", "total", "dataset"])
+
+
+def log_result(user_id: str, subject: str, difficulty: str, score: int, total: int, dataset_path: str):
+	ensure_results_header(RESULTS_CSV)
+	with open(RESULTS_CSV, "a", newline="", encoding="utf-8") as f:
+		writer = csv.writer(f)
+		writer.writerow([
+			datetime.now().isoformat(timespec="seconds"),
+			user_id,
+			subject,
+			difficulty,
+			score,
+			total,
+			os.path.basename(dataset_path),
+		])
+
+
+# ---------------------------
 # Quiz Function
 # ---------------------------
 
@@ -112,16 +143,22 @@ def run_quiz(user_id, subject, difficulty, quiz_data):
 
 def main():
 	print(bold("====== Personalized Learning Quiz ======"))
-	user_id = input("Enter your User ID (e.g., 101, 102, 103): ").strip()
+	user_id = input("Enter your User ID (e.g., 101, 102, 103 ... any number is fine): ").strip()
+	if not user_id.isdigit():
+		print(red("User ID should be a number (e.g., 101)."))
+		return
 
 	# Load dataset
 	try:
-		quiz_data = load_quiz_data("quiz_data.csv")
+		quiz_data = load_quiz_data(DEFAULT_DATASET)
 	except FileNotFoundError:
-		print(red("quiz_data.csv not found. Make sure the CSV is in the same folder."))
+		print(red(f"Dataset not found: {DEFAULT_DATASET}. Make sure the CSV exists."))
+		sys.exit(1)
+	except KeyError as e:
+		print(red(f"Dataset missing required column: {e}. Expected columns shown above."))
 		sys.exit(1)
 
-	scores = {}  # subject -> (score, asked_count)
+	scores = {}  # subject -> (score, asked_count, difficulty)
 
 	while True:
 		available_subjects = ", ".join(quiz_data.keys())
@@ -143,7 +180,10 @@ def main():
 			continue
 
 		score, asked = run_quiz(user_id, subject, difficulty, quiz_data)
-		scores[subject] = (score, asked)
+		scores[subject] = (score, asked, difficulty)
+
+		# Log immediately per quiz
+		log_result(user_id, subject, difficulty, score, asked, DEFAULT_DATASET)
 
 		cont = input("Do you want to continue with another subject? (yes/no): ").strip().lower()
 		if cont not in {"y", "yes"}:
@@ -152,10 +192,11 @@ def main():
 	# Final Results
 	hr()
 	print(bold("===== FINAL SCORES ====="))
-	for sub, (sc, asked) in scores.items():
+	for sub, (sc, asked, diff) in scores.items():
 		den = asked if asked > 0 else QUESTIONS_PER_QUIZ
-		print(f"{sub}: {sc}/{den}")
-	print(bold("\nThank you for playing the quiz!"))
+		print(f"{sub} [{diff}]: {sc}/{den}")
+	print(bold("\nResults saved to ") + bold(RESULTS_CSV))
+	print(bold("Thank you for playing the quiz!"))
 
 
 if __name__ == "__main__":
