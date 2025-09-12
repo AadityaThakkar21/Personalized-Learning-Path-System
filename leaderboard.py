@@ -70,7 +70,7 @@ if __name__ == "__main__":
     lb = AdaptiveLeaderboard()
 
     # Load quiz results from external file
-    lb.load_quiz_data("quiz_data.csv")
+    lb.load_quiz_data("quiz_results.csv")
 
 
 
@@ -82,4 +82,5 @@ if __name__ == "__main__":
 
     print("\n🌍 Overall Leaderboard")
     print(lb.get_overall_leaderboard())
+
 
