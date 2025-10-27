@@ -4,6 +4,7 @@ st.title("📚 Personalized Learning System")
 st.subheader("Explore a variety of features to enhance your learning experience with us!")
 st.text("Use the navigation menu on the left to access different tools like Study Timetable Generator, Quiz Maker, and Leaderboard.")
 
+st.divider()
 col1, col2 = st.columns([2, 1])
 
 with col1:
@@ -16,4 +17,4 @@ with col1:
     )
 
 with col2:
-    st.image("DAU.webp", caption="DAU Logo", use_container_width=True)
+    st.image("DAU.webp", use_container_width=True)
