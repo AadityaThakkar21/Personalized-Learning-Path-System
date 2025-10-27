@@ -9,7 +9,7 @@ import string
 def run():
     st.title("🎯 Student Performance Clustering Dashboard")
 
-    with st.spinner("⏳ Computing... please wait while we process the data."):
+    with st.spinner("⏳ Loading... please wait while we process and compute everything."):
         # 1. loading data
         data = pd.read_csv("quiz_results.csv")
 
@@ -62,12 +62,15 @@ def run():
         label_map = {i: group_labels[i] for i in range(best_k)}
         student_perf["Group"] = student_perf["Cluster"].map(label_map)
 
-    st.success("✅ Data computed successfully!")
+        # Prepare data without cluster/group columns for display
+        student_display = student_perf.drop(columns=["Cluster", "Group"])
+
+    st.success("✅ All computations completed successfully!")
 
     st.subheader("📊 Aggregated Student Data")
-    st.dataframe(student_perf)
+    st.dataframe(student_display)
 
-    st.write(f"✅ Optimal number of clusters: {best_k}")
+    st.write(f"✅ Optimal number of clusters found: {best_k}")
 
     # show groups and members
     st.subheader("👥 Ideal Groups with respective Student IDs")
