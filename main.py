@@ -1,20 +1,185 @@
 import streamlit as st
 
-st.title("📚 Personalized Learning System")
-st.subheader("Explore a variety of features to enhance your learning experience with us!")
-st.text("Use the navigation menu on the left to access different tools like Study Timetable Generator, Quiz Maker, and Leaderboard.")
+# --- Page Config ---
+st.set_page_config(
+    page_title="Personalized Learning System",
+    page_icon="🎓",
+    layout="wide",
+)
 
-st.divider()
-col1, col2 = st.columns([2, 1])
+# --- Custom CSS ---
+st.markdown("""
+<style>
+.stApp {
+    background: linear-gradient(to bottom right, #f0f7ff, #d9e9ff);
+    font-family: "Segoe UI", sans-serif;
+}
+
+.title {
+    text-align: center;
+    font-size: 2.8em;
+    color: #003366;
+    margin-bottom: 0;
+}
+.subtitle {
+    text-align: center;
+    color: #00509e;
+    font-size: 1.2em;
+    margin-top: 0.2em;
+}
+hr {
+    border: 1px solid #b0c4de;
+    margin: 1.5em 0;
+}
+
+/* Card Styling */
+.card {
+    background: rgba(255,255,255,0.9);
+    border: 1px solid #ddd;
+    border-radius: 16px;
+    padding: 1.5em;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    transition: all 0.2s ease;
+    width: 280px;
+}
+.card:hover {
+    border-color: #6a5acd;
+    transform: translateY(-3px);
+}
+.card h3 {
+    color: #002b5b;
+    margin-bottom: 0.3em;
+}
+.card p {
+    color: #444;
+    font-size: 0.95em;
+}
+.icon {
+    font-size: 1.6em;
+    color: #4b6cb7;
+}
+
+/* Logo Box */
+.logo-box {
+    background: white;
+    border-radius: 20px;
+    padding: 2em;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    text-align: center;
+    border: 1px solid #ddd;
+}
+.logo-box img {
+    width: 180px;
+    border-radius: 12px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.1);
+}
+.logo-box h3 {
+    color: #1a237e;
+    margin-top: 1em;
+}
+.stats {
+    display: flex;
+    justify-content: center;
+    gap: 2em;
+    margin-top: 1.5em;
+}
+.stat {
+    background: #f3f5ff;
+    padding: 0.8em 1.2em;
+    border-radius: 12px;
+    border: 1px solid #e0e0ff;
+}
+.stat .num {
+    font-size: 1.4em;
+    font-weight: bold;
+    color: #3f51b5;
+}
+.stat .label {
+    font-size: 0.8em;
+    color: #555;
+}
+
+/* Footer */
+.footer {
+    text-align: center;
+    font-size: 0.9em;
+    color: #444;
+    margin-top: 2em;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# --- Header Section ---
+st.markdown('<h1 class="title">🎓 Personalized Learning System</h1>', unsafe_allow_html=True)
+st.markdown('<p class="subtitle">Enhance your learning experience with adaptive tools and optimization techniques</p>', unsafe_allow_html=True)
+st.markdown("<hr>", unsafe_allow_html=True)
+
+# --- About Section ---
+col1, col2 = st.columns([2, 1], vertical_alignment="center")
 
 with col1:
-    st.markdown(
-        """
-        ### About Us
-        This platform was developed by students of **DAU** as part of their **Optimization course project**.  
-        It aims to demonstrate how optimization principles can enhance personalized learning experiences.
-        """
-    )
+    st.markdown("""
+    <h2>About</h2>
+    <p>
+    This project is a Personalized Learning Path System, developed as a group project for the IE402 course on Optimization. The system is designed to support learners by providing a streamlined and interactive learning experience with four main features:
+    </p>
+    <ol>
+    <li>Timetable Creator: Helps users create personalized study schedules.</li>
+    <li>Group Study: Recommends courses ideal groups based on variety of data points.</li>
+    <li>Quiz Maker: Allows users to take quizzes to assess their knowledge.</li>
+    <li>Leaderboard: Displays user rankings to motivate and encourage progress.</li>
+    </ol>
+    """, unsafe_allow_html=True)
 
 with col2:
-    st.image("DAU.webp", use_container_width=True)
+    st.markdown("""
+                <h2>Technology Stack:</h2>
+                <ul>
+                    <li>Python</li>
+                    <li>Streamlit</li>
+                    <li>Pandas & NumPy</li>
+                    <li>Pulp</li>
+                    <li>Scikit-learn</li>
+                    <li>Matplotlib & Seaborn</li>
+                    <li>HTML & CSS</li>
+                </ul>
+                """, unsafe_allow_html=True)
+
+st.markdown("<hr>", unsafe_allow_html=True)
+
+# --- Project Highlights Section ---
+st.markdown("""
+<div style="display:flex; flex-wrap:wrap; justify-content:center; gap:1.5em; margin-top:2em;">
+    <div class="card">
+        <span class="icon">🎯</span>
+        <h3>Student-Built Innovation</h3>
+        <p>Created by students, for students — built with real academic challenges in mind.</p>
+    </div>
+    <div class="card">
+        <span class="icon">⚙️</span>
+        <h3>Optimization Focused</h3>
+        <p>Leverages algorithms to maximize learning efficiency and engagement.</p>
+    </div>
+    <div class="card">
+        <span class="icon">🚀</span>
+        <h3>Practical Application</h3>
+        <p>Bridging theory and practice in modern educational technology.</p>
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+st.markdown("""
+<div style="text-align: center; margin-top: 2em;">
+    <img src="DAU.webp" alt="DAU Logo" width="180" style="margin-bottom: 1em;">
+    <h3>Our Team</h3>
+    <ul type="none" style="list-style-type: none; padding-left: 0; line-height: 1.8; font-size: 1.1em;">
+        <li>202301408 Vraj Patel</li>
+        <li>202301417 Aaditya Thakkar</li>
+        <li>202301114 Yogesh Bagotia</li>
+        <li>202301065 Vansh Padaliya</li>
+        <li>202301050 Siva Suhas Thatavarthy</li>
+    </ul>
+</div>
+""", unsafe_allow_html=True)
+
+
