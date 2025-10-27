@@ -1,103 +1,115 @@
+import streamlit as st
+import pandas as pd
+
+
+def get_subject_icon(subject):
+    s = subject.lower()
+    if "math" in s:
+        return "🧮"
+    elif "english" in s or "literature" in s:
+        return "📖"
+    elif "science" in s or "physics" in s or "chemistry" in s or "biology" in s:
+        return "🔬"
+    elif "social" in s or "history" in s or "civics" in s or "geography" in s:
+        return "🏛️"  
+    else:
+        return "📘"  
+
+
+class AdaptiveLeaderboard:
+    def __init__(self):
+        self.data = pd.DataFrame(columns=["userid", "subject", "score", "difficulty"])
+        self.weights = {"Easy": 1.0, "Intermediate": 1.0, "Hard": 1.0}
+        self.difficulty_map = {"Easy": 0, "Intermediate": 1, "Hard": 2}
+
+    def load_quiz_data(self, filepath):
+        try:
+            df = pd.read_csv(filepath)
+            if "user_id" in df.columns:
+                df = df.rename(columns={"user_id": "userid"})
+            df = df[["userid", "subject", "score", "difficulty"]]
+            self.data = pd.concat([self.data, df], ignore_index=True)
+            return True
+        except FileNotFoundError:
+            st.error(f"File not found: {filepath}")
+            return False
+        except Exception as e:
+            st.error(f"⚠ Error loading quiz data: {e}")
+            return False
+
+    def weighted_score(self, row):
+        return row["score"] * self.weights[row["difficulty"]]
+
+    def get_subject_leaderboard(self, subject):
+        df = self.data[self.data["subject"] == subject].copy()
+        if df.empty:
+            return pd.DataFrame(columns=["Rank", "userid", "weighted_score"])
+        df["weighted_score"] = df.apply(self.weighted_score, axis=1)
+        leaderboard = df.groupby("userid")["weighted_score"].sum().reset_index()
+        leaderboard = leaderboard.sort_values(by="weighted_score", ascending=False).reset_index(drop=True)
+        leaderboard.insert(0, "Rank", leaderboard.index + 1)
+        return leaderboard
+
+    def get_overall_leaderboard(self):
+        if self.data.empty:
+            return pd.DataFrame(columns=["Rank", "userid", "weighted_score"])
+        df = self.data.copy()
+        df["weighted_score"] = df.apply(self.weighted_score, axis=1)
+        leaderboard = df.groupby("userid")["weighted_score"].sum().reset_index()
+        leaderboard = leaderboard.sort_values(by="weighted_score", ascending=False).reset_index(drop=True)
+        leaderboard.insert(0, "Rank", leaderboard.index + 1)
+        return leaderboard
+
+
+def render_centered_table(df):
+    """Renders a dataframe without index and centered text."""
+    st.markdown(
+        df.to_html(index=False, justify="center", classes="dataframe", escape=False),
+        unsafe_allow_html=True
+    )
+
+
 def run():
-    import pandas as pd  
+    st.set_page_config(page_title="Adaptive Leaderboard", layout="centered")
 
-    class AdaptiveLeaderboard:
-        def __init__(self):
-            self.data = pd.DataFrame(columns=["userid", "subject", "score", "difficulty"])
-            
-            self.weights = {"Easy": 1.0, "Intermediate": 1.0, "Hard": 1.0}
-            
-            self.difficulty_map = {"Easy": 0, "Intermediate": 1, "Hard": 2}
+    st.markdown("""
+        <style>
+            table {
+                margin-left: auto !important;
+                margin-right: auto !important;
+                text-align: center !important;
+            }
+            th, td {
+                text-align: center !important;
+                padding: 8px 16px !important;
+            }
+            thead th {
+                background-color: #222 !important;
+                color: white !important;
+            }
+        </style>
+    """, unsafe_allow_html=True)
 
-        def load_quiz_data(self, filepath):
-            """Load quiz results from a CSV file into the leaderboard."""
-            try:
-                df = pd.read_csv(filepath)
+    st.title("🏆 Adaptive Leaderboard System")
 
-                if "user_id" in df.columns:
-                    df = df.rename(columns={"user_id": "userid"})
+    lb = AdaptiveLeaderboard()
+    file_path = "quiz_results.csv"
 
-                df = df[["userid", "subject", "score", "difficulty"]]
-                self.data = pd.concat([self.data, df], ignore_index=True)
+    if lb.load_quiz_data(file_path):
+        st.success(f"✅ Loaded data from `{file_path}` successfully!")
 
-            except FileNotFoundError:
-                print(f" File not found: {filepath}")
-            except Exception as e:
-                print(f"⚠ Error loading quiz data: {e}")
+        for subject in lb.data["subject"].unique():
+            icon = get_subject_icon(subject)
+            st.markdown(f"<h2 style='text-align:center;'>{icon} {subject} Leaderboard</h2>", unsafe_allow_html=True)
+            leaderboard = lb.get_subject_leaderboard(subject)
+            render_centered_table(leaderboard)
 
-        def add_quiz_result(self, userid, subject, score, difficulty):
-            """Add new quiz result to the system."""
-            new_entry = {"userid": userid, "subject": subject, "score": score, "difficulty": difficulty}
-            self.data = pd.concat([self.data, pd.DataFrame([new_entry])], ignore_index=True)
-
-        def weighted_score(self, row):
-            """Compute weighted score for a quiz attempt."""
-            return row["score"] * self.weights[row["difficulty"]]
-
-        def get_subject_leaderboard(self, subject):
-            """Leaderboard for a specific subject."""
-            df = self.data[self.data["subject"] == subject].copy()
-            if df.empty:
-                return pd.DataFrame(columns=["Rank", "userid", "weighted_score"])
-            df["weighted_score"] = df.apply(self.weighted_score, axis=1)
-            leaderboard = df.groupby("userid")["weighted_score"].sum().reset_index()
-            leaderboard = leaderboard.sort_values(by="weighted_score", ascending=False).reset_index(drop=True)
-            leaderboard.insert(0, "Rank", leaderboard.index + 1)  
-            return leaderboard
-
-        def get_overall_leaderboard(self):
-            """Overall leaderboard across all subjects."""
-            if self.data.empty:
-                return pd.DataFrame(columns=["Rank", "userid", "weighted_score"])
-            df = self.data.copy()
-            df["weighted_score"] = df.apply(self.weighted_score, axis=1)
-            leaderboard = df.groupby("userid")["weighted_score"].sum().reset_index()
-            leaderboard = leaderboard.sort_values(by="weighted_score", ascending=False).reset_index(drop=True)
-            leaderboard.insert(0, "Rank", leaderboard.index + 1)  
-            return leaderboard
-
-        def train_weights(self, lr=0.0001, epochs=500):
-            """
-            Train difficulty weights using Gradient Descent.
-            Objective: Ensure higher difficulty → proportionally higher effective score.
-            """
-            difficulties = list(self.weights.keys())
-            
-            for _ in range(epochs):
-                grads = {d: 0.0 for d in difficulties}
-
-                # Compute gradients
-                for _, row in self.data.iterrows():
-                    diff_index = self.difficulty_map[row["difficulty"]]
-                    weighted = row["score"] * self.weights[row["difficulty"]]
-                    target = (diff_index + 1) * row["score"]  # ideal scaling
-                    error = weighted - target
-                    grads[row["difficulty"]] += error * row["score"]
-
-                # Update weights
-                for d in difficulties:
-                    self.weights[d] -= lr * grads[d]
-
-            return self.weights
+        st.markdown("<h2 style='text-align:center;'>🌍 Overall Leaderboard</h2>", unsafe_allow_html=True)
+        overall = lb.get_overall_leaderboard()
+        render_centered_table(overall)
+    else:
+        st.warning("⚠ No data found or failed to load file.")
 
 
-    if __name__ == "__main__":
-        lb = AdaptiveLeaderboard()
-
-        lb.load_quiz_data("quiz_results.csv")
-
-        if not lb.data.empty:
-            for subject in lb.data["subject"].unique():
-                print(f"\n Subject Leaderboard: {subject}")
-                print(lb.get_subject_leaderboard(subject).to_string(index=False))  # no row index
-        else:
-            print("⚠ No data found in CSV.")
-
-        # Print overall leaderboard
-        print("\n Overall Leaderboard")
-        print(lb.get_overall_leaderboard().to_string(index=False))  # no row index
-    
-
-# only run this when you execute Time_table.py directly:
 if __name__ == "__main__":
     run()
