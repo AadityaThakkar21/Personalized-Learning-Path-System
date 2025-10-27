@@ -1,34 +1,19 @@
+import streamlit as st
 
-from Time_table import run as timetable_run
-# from course_suggestor import run as course_run
-from quiz_maker import run as quiz_run
-from leaderboard import run as leaderboard_run
+st.title("📚 Personalized Learning System")
+st.subheader("Explore a variety of features to enhance your learning experience with us!")
+st.text("Use the navigation menu on the left to access different tools like Study Timetable Generator, Quiz Maker, and Leaderboard.")
 
-def main():
-    while True:
-        print("\n--- Personalized Learning System ---")
-        print("1. Create Timetable")
-        print("2. Get Course Suggestions")
-        print("3. Take a Quiz")
-        print("4. Leaderboard")
-        print("5. Exit")
+col1, col2 = st.columns([2, 1])
 
-        choice = input("Enter your choice (1-5): ")
+with col1:
+    st.markdown(
+        """
+        ### About Us
+        This platform was developed by students of **DAU** as part of their **Optimization course project**.  
+        It aims to demonstrate how optimization principles can enhance personalized learning experiences.
+        """
+    )
 
-        if choice == '1':
-            timetable_run()
-        elif choice == '2':
-            # course_run()
-            print("Course Suggestor is currently unavailable.")
-        elif choice == '3':
-            quiz_run()
-        elif choice == '4':
-            leaderboard_run()
-        elif choice == '5':
-            print("Goodbye!")
-            break
-        else:
-            print("Invalid choice. Please try again.")
-
-if __name__ == "__main__":
-    main()
+with col2:
+    st.image("DAU.webp", caption="DAU Logo", use_container_width=True)
