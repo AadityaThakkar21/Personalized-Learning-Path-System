@@ -1,6 +1,6 @@
-# main.py
+
 from Time_table import run as timetable_run
-from course_suggestor import run as course_run
+# from course_suggestor import run as course_run
 from quiz_maker import run as quiz_run
 from leaderboard import run as leaderboard_run
 
@@ -18,7 +18,8 @@ def main():
         if choice == '1':
             timetable_run()
         elif choice == '2':
-            course_run()
+            # course_run()
+            print("Course Suggestor is currently unavailable.")
         elif choice == '3':
             quiz_run()
         elif choice == '4':

@@ -90,7 +90,7 @@ def run_quiz(user_id, subject, difficulty, quiz_data):
     print(bold(f"\n🎯 {subject} Quiz Finished. Your Score: {score}/{asked_count}\n"))
     return score, asked_count
 
-def main():
+def run():
     print(bold("====== Personalized Learning Quiz ======"))
     user_id = input("Enter your User ID (e.g., 101, 102, 103 ... any number is fine): ").strip()
     if not user_id.isdigit():
@@ -135,4 +135,4 @@ def main():
     print(bold("Thank you for playing the quiz!"))
 
 if __name__ == "__main__":
-    main()
+    run()
