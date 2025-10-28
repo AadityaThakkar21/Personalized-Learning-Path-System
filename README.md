@@ -4,7 +4,6 @@
 This project is a **Personalized Learning Path System**, developed as a group project for the IE402 course on Optimization. The system is designed to support learners by providing a streamlined and interactive learning experience with four main features: 
 
 - **Timetable Creator:** Helps users create personalized study schedules.
-- **Course Suggestor:** Recommends courses based on user preferences and goals.
 - **Quiz Maker:** Allows users to take quizzes to assess their knowledge.
 - **Leaderboard:** Displays user rankings to motivate and encourage progress.
 
