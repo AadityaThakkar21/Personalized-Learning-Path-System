@@ -10,11 +10,11 @@ This project is a **Personalized Learning Path System**, developed as a group pr
 The goal is to optimize the learning process through personalized recommendations and interactive modules.
 
 ## Technologies Used
-- Python (core programming language)
-- Python libraries like pulp, pandas, etc
+- Python (as core programming language) & streamlit to build the frontend
+- Python libraries like pulp, pandas, scipy, etc
 
 ## Group Members
-- 202301408	Vraj Patel (Leader)
+- 202301408	Vraj Patel
 - 202301417	Aaditya Thakkar	
 - 202301114	Yogesh Bagotia	
 - 202301065	Vansh padaliya	
