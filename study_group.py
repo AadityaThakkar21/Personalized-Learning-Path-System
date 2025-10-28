@@ -39,22 +39,30 @@ def run():
         scaled_data = scaler.fit_transform(student_perf[features])
 
         # optimal cluster finder
-        def optimal_k(X, max_k=6):
-            n_samples = X.shape[0]
-            max_k = min(max_k, n_samples - 1)
+        def optimal_k(scaled_data):
             sil_scores = []
-            for k in range(2, max_k + 1):
-                km = KMeans(n_clusters=k, random_state=42, n_init=20)
-                labels = km.fit_predict(X)
-                if len(set(labels)) > 1:
-                    sil_scores.append(silhouette_score(X, labels))
-                else:
-                    sil_scores.append(-1)
-            best_k = np.argmax(sil_scores) + 2
-            return best_k, sil_scores
+            possible_k = range(2, 10)  # or whatever range you use
 
-        best_k, scores = optimal_k(scaled_data)
+            for k in possible_k:
+                if len(scaled_data) < k:
+                    continue  # skip if not enough samples for this k
+                try:
+                    kmeans = KMeans(n_clusters=k, random_state=42)
+                    labels = kmeans.fit_predict(scaled_data)
+                    score = silhouette_score(scaled_data, labels)
+                    sil_scores.append(score)
+                except Exception as e:
+                    print(f"Skipping k={k} due to error: {e}")
+                    continue
 
+            if not sil_scores:  # nothing collected
+                raise ValueError("No valid silhouette scores could be computed. "
+                         "Check your data or clustering parameters.")
+
+            best_k = np.argmax(sil_scores) + 2  # +2 since range starts from 2
+            return best_k
+
+        best_k = optimal_k(scaled_data)
         # perform K-means
         kmeans = KMeans(n_clusters=best_k, random_state=42, n_init=30)
         student_perf["Cluster"] = kmeans.fit_predict(scaled_data)
