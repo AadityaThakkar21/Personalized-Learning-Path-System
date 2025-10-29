@@ -1,4 +1,7 @@
+from PIL import Image
 import streamlit as st
+import base64
+from io import BytesIO
 
 # --- Page Config ---
 st.set_page_config(
@@ -168,18 +171,46 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-st.markdown("""
-<div style="text-align: center; margin-top: 2em;">
-    <img src="DAU.webp" alt="DAU Logo" width="180" style="margin-bottom: 1em;">
-    <h3>Our Team</h3>
-    <ul type="none" style="list-style-type: none; padding-left: 0; line-height: 1.8; font-size: 1.1em;">
-        <li>202301408 Vraj Patel</li>
-        <li>202301417 Aaditya Thakkar</li>
-        <li>202301114 Yogesh Bagotia</li>
-        <li>202301065 Vansh Padaliya</li>
-        <li>202301050 Siva Suhas Thatavarthy</li>
-    </ul>
+def image_to_base64(img_path):
+    img = Image.open(img_path)
+    buffer = BytesIO()
+    img.save(buffer, format="WEBP")
+    return base64.b64encode(buffer.getvalue()).decode()
+
+img_base64 = image_to_base64("DAU.webp")
+
+st.markdown(f"""
+<style>
+.center-container {{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 80vh;
+    gap: 40px;
+}}
+.divider {{
+    border-left: 2px solid #ccc;
+    height: 250px;
+}}
+.team-text {{
+    text-align: left;
+    line-height: 1.8;
+    font-size: 1.1em;
+}}
+</style>
+
+<div class="center-container">
+    <img src="data:image/webp;base64,{img_base64}" width="300">
+    <div class="divider"></div>
+    <div class="team-text">
+        <h3><u>Our Team</u></h3>
+        <ul style="list-style-type:none; padding-left:0;">
+            <li>202301408 Vraj Patel</li>
+            <li>202301417 Aaditya Thakkar</li>
+            <li>202301114 Yogesh Bagotia</li>
+            <li>202301065 Vansh Padaliya</li>
+            <li>202301050 Siva Suhas Thatavarthy</li>
+        </ul>
+    </div>
 </div>
 """, unsafe_allow_html=True)
-
-
