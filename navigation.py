@@ -7,9 +7,11 @@ QuizMaker = st.Page("quiz_maker.py", title="Quiz Maker", icon="📝")
 Leaderboard = st.Page("leaderboard.py", title="Leaderboard", icon="🏆")
 StudyGroup = st.Page("study_group.py", title="Study Group", icon="👥")
 KnowledgeGap = st.Page("knowledge_gap_detector.py", title="Knowledge Gap Detector", icon="🧩")
+SpacedRepetition = st.Page("spaced_repetition_system.py", title="Spaced Repetition", icon="🧠")
 
 # Set up navigation
 pg = st.navigation([main_page, TimeTable, QuizMaker, Leaderboard, StudyGroup, KnowledgeGap])
+pg = st.navigation([main_page, TimeTable, QuizMaker, Leaderboard, StudyGroup, SpacedRepetition])
 
 # Run the selected page
 pg.run()
