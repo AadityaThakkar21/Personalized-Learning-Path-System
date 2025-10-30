@@ -128,15 +128,16 @@ with col1:
     </p>
     <ol>
     <li>Timetable Creator: Helps users create personalized study schedules.</li>
-    <li>Group Study: Recommends courses ideal groups based on variety of data points.</li>
     <li>Quiz Maker: Allows users to take quizzes to assess their knowledge.</li>
     <li>Leaderboard: Displays user rankings to motivate and encourage progress.</li>
+    <li>Study Group: Recommends courses ideal groups based on variety of data points.</li>
+    <li>Spaced Repetition: Guides users on how to space their study routine
     </ol>
     """, unsafe_allow_html=True)
 
 with col2:
     st.markdown("""
-                <h2>Technology Stack:</h2>
+                <h2>Tech Stack:</h2>
                 <ul>
                     <li>Python</li>
                     <li>Streamlit</li>
@@ -185,7 +186,7 @@ st.markdown(f"""
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 80vh;
+    min-height: 55vh;
     gap: 40px;
 }}
 .divider {{
