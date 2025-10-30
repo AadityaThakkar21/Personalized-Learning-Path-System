@@ -1,6 +1,7 @@
 import streamlit as st
 import pulp
 import matplotlib.pyplot as plt
+import pandas as pd
 
 def run():
     st.title("📚 Personalized Study Timetable Generator")
@@ -86,16 +87,72 @@ def run():
 
             # --- Pie chart visualization ---
             if results:
-                labels = [r[0] for r in results]
+                labels = [f"{r[0]} ({r[1]} hrs)" for r in results]
                 sizes = [r[1] for r in results]
 
                 fig, ax = plt.subplots()
                 ax.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=90)
                 ax.axis('equal')
                 st.pyplot(fig)
+                
+                df = pd.DataFrame(results, columns=["Subject", "Allocated Hours"])
 
+                # Convert DataFrame to HTML and style it
+                st.markdown(
+                    df.to_html(index=False, justify="center", classes="center-table"),
+                    unsafe_allow_html=True
+                )
+
+                st.markdown("""
+                    <style>
+                    .center-table {
+                        margin-left: auto;
+                        margin-right: auto;
+                        text-align: center !important;
+                        border-collapse: collapse;
+                    }
+                    .center-table th, .center-table td {
+                        text-align: center !important;
+                        padding: 8px 16px;
+                        border: 1px solid #ddd;
+                    }
+                    .center-table th {
+                        font-weight: 600;
+                    }
+                    </style>
+                """, unsafe_allow_html=True)
+                
+                
+                if results:
+                    st.markdown(
+                    """
+                    <div style="display: flex; justify-content: center; margin-bottom: 2rem">
+                        <a href="data:file/csv;base64,{csv_data}" download="study_plan.csv">
+                            <button style="
+                                color:white;
+                                border:none;
+                                padding:10px 20px;
+                                border-radius:8px;
+                                cursor:pointer;
+                                font-size:16px;">
+                                📥 Download Study Plan
+                            </button>
+                        </a>
+                    </div>
+                    """.format(
+                        csv_data=df.to_csv(index=False).encode('utf-8').decode('latin1')
+                    ),
+                    unsafe_allow_html=True
+                )
+
+
+
+                st.info("💡 Tip: Start with the highest priority subjects when your energy is highest!")
+            
         except Exception as e:
             st.error(f"Error: {e}")
+
+       
 
 if __name__ == "__main__":
     run()
