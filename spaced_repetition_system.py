@@ -50,8 +50,16 @@ st.markdown(r"A simple model for calculating optimal review intervals based on a
 # --- User Manual Expander ---
 st.markdown("---")
 with st.expander("📚 User Manual & Variable Descriptions"):
-    st.markdown(f"""
+    st.markdown(r"""
         This tool uses a simple exponential decay model to calculate your optimal review intervals ($t_i$).
+
+        ### Core Formulas
+        
+        The core formula for calculating the optimal interval ($t_i$) is:
+        $$t_i = \frac{-ln(R_{target})}{\lambda}$$
+        
+        The formula for updating the personalized decay rate ($\lambda$) is:
+        $$\lambda_{new} = \lambda_{old} \times (1 + \beta \times (1 - \text{Score}))$$
 
         ### Model Configuration
 
@@ -174,7 +182,7 @@ else:
 base_config = {
     "Concept": st.column_config.TextColumn("Concept Name", required=True),
     "Initial Lambda": st.column_config.NumberColumn(
-        r"Initial Decay Rate", 
+        r"Initial Lambda ($\lambda_{old}$)", 
         help="Higher value means faster initial forgetting (e.g., 0.05 for easy, 0.15 for hard).",
         min_value=0.001,
         step=0.01
@@ -205,7 +213,7 @@ if st.session_state.delete_mode:
     # Disable editing on the core columns
     # We must explicitly redefine the columns to set 'disabled=True'
     editor_config["Concept"] = st.column_config.TextColumn("Concept Name", required=True, disabled=True)
-    editor_config["Initial Lambda"] = st.column_config.NumberColumn(r"Initial Decay Rate", disabled=True)
+    editor_config["Initial Lambda"] = st.column_config.NumberColumn(r"Initial Lambda ($\lambda_{old}$)", disabled=True)
     editor_config["New Quiz Score (0-1)"] = st.column_config.NumberColumn("New Quiz Score", disabled=True)
     
     editor_key = "data_editor_delete_mode"
@@ -246,9 +254,6 @@ else:
         new_delete_data = list(old_delete_data) + [False] * (new_length - old_length)
     elif new_length < old_length:
         # Rows were deleted: Truncate the delete column data
-        # NOTE: When rows are deleted in edit mode, Streamlit handles the index alignment automatically.
-        # We assume the user deleted the last row or a row that doesn't mess up the indices too much for this simple model.
-        # For robustness, we map the old 'Delete?' state to the new 'Concept' names (the primary identifier).
         
         # Simple deletion handling (assuming most operations are append/remove last):
         new_delete_data = old_delete_data[:new_length].tolist()
@@ -281,14 +286,14 @@ if st.session_state.delete_mode:
                     key="confirm_delete_btn",
                     help="Permanently deletes all rows marked with a checkmark.")
     
-    btn_col2.button("❌ Cancel Deletion", 
+    btn_col2.button("❌ Cancel Deletion Mode", 
                     on_click=toggle_delete_mode, 
                     type="secondary",
                     key="cancel_delete_btn",
                     help="Go back to the editing mode without deleting.")
     
 else:
-    btn_col1.button("🗑️ Delete Courses", 
+    btn_col1.button("🗑️ Enter Deletion Mode", 
                     on_click=toggle_delete_mode, 
                     type="secondary",
                     key="enter_delete_btn",
@@ -409,6 +414,3 @@ if not current_df_for_calc.empty:
     
 else:
     st.warning("Please add at least one concept to the table to run the simulation.")
-
-st.markdown("---")
-st.caption(r"The core formula for the optimal interval $t_i$ is $t_i = \frac{-ln(R_{target})}{\lambda}$.")
