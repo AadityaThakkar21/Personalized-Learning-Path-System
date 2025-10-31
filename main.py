@@ -124,14 +124,15 @@ with col1:
     st.markdown("""
     <h2>About</h2>
     <p>
-    This project is a Personalized Learning Path System, developed as a group project for the IE402 course on Optimization. The system is designed to support learners by providing a streamlined and interactive learning experience with four main features:
+    This project is a Personalized Learning Path System, developed as a group project for the <b>IE402 course on Optimization</b>. The system is designed to support learners by providing a streamlined and interactive learning experience with four main features:
     </p>
     <ol>
-    <li>Timetable Creator: Helps users create personalized study schedules.</li>
-    <li>Quiz Maker: Allows users to take quizzes to assess their knowledge.</li>
-    <li>Leaderboard: Displays user rankings to motivate and encourage progress.</li>
-    <li>Study Group: Recommends courses ideal groups based on variety of data points.</li>
-    <li>Spaced Repetition: Guides users on how to space their study routine
+    <li><b>Timetable Creator:</b> Helps users create personalized study schedules.</li>
+    <li><b>Quiz Maker:</b> Allows users to take quizzes to assess their knowledge.</li>
+    <li><b>Leaderboard:</b> Displays user rankings to motivate and encourage progress.</li>
+    <li><b>Study Group:</b> Recommends courses ideal groups based on variety of data points.</li>
+    <li><b>Spaced Repetition:</b> Guides users on how to space their study routine</li>
+    <li><b>Knowledge Gap Detector:</b> </li>
     </ol>
     """, unsafe_allow_html=True)
 
@@ -141,7 +142,8 @@ with col2:
                 <ul>
                     <li>Python</li>
                     <li>Streamlit</li>
-                    <li>Pandas & NumPy</li>
+                    <li>Pandas</li>
+                    <li>NumPy</li>
                     <li>Pulp</li>
                     <li>Scikit-learn</li>
                     <li>Matplotlib & Seaborn</li>
