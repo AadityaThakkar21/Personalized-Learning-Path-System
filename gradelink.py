@@ -1,454 +1,574 @@
 import streamlit as st
 import pandas as pd
-import uuid
+import numpy as np
 import math
 
-# --- Global State Initialization ---
+# --- Configuration Constants (Defaults) ---
+DEFAULT_COURSE_NAME = 'Calculus I'
+DEFAULT_TARGET_GRADE = 90.0
+DEFAULT_COURSE_CREDITS = 3.0
 
-def init_session_state():
-    """Initializes all necessary session state variables."""
+# --- Grade Tracking Data Structure Initialization ---
+def initialize_data():
+    """Initializes all necessary data structures in Streamlit session state."""
+    
+# [ ... initialize_data function remains unchanged ... ]
+    # 1. GPA Scale Configuration (Key: Letter Grade, Value: Min Percent)
     if 'gpa_scale' not in st.session_state:
-        st.session_state.gpa_scale = {
-            'A+': 4.0, 'A': 4.0, 'A-': 3.7, 
-            'B+': 3.3, 'B': 3.0, 'B-': 2.7, 
-            'C+': 2.3, 'C': 2.0, 'C-': 1.7, 
-            'D+': 1.3, 'D': 1.0, 'D-': 0.7, 
-            'F': 0.0
+        st.session_state.gpa_scale = pd.DataFrame({
+            'Letter Grade (e.g., A, B+)': ['A+', 'A', 'A-', 'B+', 'B', 'B-', 'C+', 'C', 'C-', 'D+', 'D', 'F'],
+            'Min Grade (%)': [97.0, 93.0, 90.0, 87.0, 83.0, 80.0, 77.0, 73.0, 70.0, 67.0, 60.0, 0.0],
+            'GPA Value': [4.0, 4.0, 3.7, 3.3, 3.0, 2.7, 2.3, 2.0, 1.7, 1.3, 1.0, 0.0]
+        })
+
+    # 2. Main Course Data Structure
+    if 'gpa_data' not in st.session_state:
+        st.session_state.gpa_data = {}
+        
+    # 3. Initialize a default course if none exist
+    if not st.session_state.gpa_data:
+        st.session_state.gpa_data[DEFAULT_COURSE_NAME] = {
+            'Course Credits': DEFAULT_COURSE_CREDITS,
+            'Target Course Grade (%)': DEFAULT_TARGET_GRADE,
+            'assignments': pd.DataFrame({
+                'Type': ['Homework', 'Midterm', 'Final Exam', 'Project'],
+                'Weight (%)': [30, 30, 30, 10],
+                'Assignment Name': ['HW Average', 'Midterm 1', 'Final Exam', 'Term Project'],
+                'Grade (%)': [85.0, 92.0, None, None], # None means ungraded/remaining
+                'Completed': [True, True, False, False],
+                'Delete?': [False, False, False, False]
+            })
         }
-    
-    if 'subjects' not in st.session_state:
-        st.session_state.subjects = [
-            {
-                'id': str(uuid.uuid4()),
-                'name': 'Calculus I',
-                'credits': 3.0,
-                'target_grade': 90.0,
-                'assignments': [
-                    {'id': str(uuid.uuid4()), 'type': 'Homework', 'weight': 30.0, 'name': 'Weekly HW Average', 'grade': 85.0},
-                    {'id': str(uuid.uuid4()), 'type': 'Test', 'weight': 50.0, 'name': 'Midterm Exam', 'grade': 92.0},
-                    {'id': str(uuid.uuid4()), 'type': 'Final', 'weight': 20.0, 'name': 'Final Exam', 'grade': None},
-                ]
-            },
-            {
-                'id': str(uuid.uuid4()),
-                'name': 'Intro to Python',
-                'credits': 4.0,
-                'target_grade': 80.0,
-                'assignments': [
-                    {'id': str(uuid.uuid4()), 'type': 'Project', 'weight': 60.0, 'name': 'Final Project', 'grade': 78.0},
-                    {'id': str(uuid.uuid4()), 'type': 'Quiz', 'weight': 40.0, 'name': 'Quiz Average', 'grade': 85.0},
-                ]
-            }
-        ]
-
-    if 'selected_subject_id' not in st.session_state:
-        st.session_state.selected_subject_id = None
-        if st.session_state.subjects:
-            st.session_state.selected_subject_id = st.session_state.subjects[0]['id']
-
-    if 'deletion_mode' not in st.session_state:
-        st.session_state.deletion_mode = False
-    
-    if 'subjects_to_delete' not in st.session_state:
-        st.session_state.subjects_to_delete = set()
-    
-    # Track previous state to detect changes
+        
+    # 4. State for current selection and mode
+    if 'current_course' not in st.session_state:
+        st.session_state.current_course = DEFAULT_COURSE_NAME
+    if 'manage_mode' not in st.session_state:
+        st.session_state.manage_mode = 'details' # 'details', 'add', 'delete'
+    if 'delete_mode' not in st.session_state:
+        st.session_state.delete_mode = False
+        
+    # 5. NEW: State for change detection
     if 'prev_assignments_state' not in st.session_state:
         st.session_state.prev_assignments_state = {}
 
+# --- Core Calculation Functions ---
 
-init_session_state()
-
-# --- Calculation Functions ---
-
-def calculate_subject_grade(subject_data):
-    """Calculates the weighted average grade for a single subject."""
-    total_weighted_points_earned = 0.0
-    total_weight_graded = 0.0
-    total_course_weight = 0.0
-
-    for assignment in subject_data['assignments']:
-        weight = float(assignment.get('weight', 0.0) or 0.0)
-        total_course_weight += weight
+def calculate_course_grade(course_data: dict) -> tuple[float, float, float, float]:
+    """
+    Calculates the current, weighted completed grade, total weight completed, and *projected final grade*.
+    Returns: (Current Grade on Completed Work, Weighted Completed Grade, Total Weight Completed, Projected Final Grade)
+    """
+# [ ... calculate_course_grade function remains unchanged ... ]
+    df = course_data['assignments'].copy()
+    
+    # Ensure weights sum to 100
+    total_weight = df['Weight (%)'].sum()
+    if total_weight == 0:
+        return 0.0, 0.0, 0.0, 0.0
+    
+    df['Normalized Weight'] = df['Weight (%)'] / 100
+    
+    # 1. Calculate Weighted Completed Grade (Score achieved out of 100)
+    # Weighted Score = (Weight / 100) * Grade
+    df['Weighted Score'] = np.where(df['Completed'], df['Normalized Weight'] * df['Grade (%)'], 0.0)
+    weighted_completed_grade = df['Weighted Score'].sum()
+    
+    # 2. Calculate Total Weight Completed
+    total_completed_weight = df[df['Completed'] == True]['Weight (%)'].sum()
+    
+    # 3. Calculate Current Grade (only completed assignments, scaled to 100%)
+    if total_completed_weight > 0:
+        current_grade = (weighted_completed_grade / (total_completed_weight / 100))
+    else:
+        current_grade = 0.0
         
-        grade_value = assignment.get('grade')
-        if grade_value is not None and isinstance(grade_value, (int, float)) and not math.isnan(grade_value):
-            grade = grade_value
-            total_weighted_points_earned += (grade * weight)
-            total_weight_graded += weight
-    
-    current_percentage = None
-    if total_weight_graded > 0:
-        current_percentage = total_weighted_points_earned / total_weight_graded
+    # 4. Calculate Projected Final Grade (The grade out of 100 achieved if all assignments have grades)
+    projected_final_grade = weighted_completed_grade
         
-    target_grade = subject_data['target_grade']
-    remaining_weight = total_course_weight - total_weight_graded
-    
-    required_grade = None
-    
-    if remaining_weight > 0 and target_grade is not None and total_course_weight > 0:
-        desired_total_weighted_points = target_grade * total_course_weight
-        required_points_from_remaining = desired_total_weighted_points - total_weighted_points_earned
-        required_grade = required_points_from_remaining / remaining_weight
-        required_grade = max(0.0, required_grade)
+    return current_grade, weighted_completed_grade, total_completed_weight, projected_final_grade
 
-    return {
-        'current_percentage': current_percentage,
-        'total_weight_graded': total_weight_graded, 
-        'total_course_weight': total_course_weight,
-        'required_grade': required_grade
-    }
 
-def calculate_gpa(subjects, gpa_scale):
-    """Calculates the overall GPA using the current subject grades and credits."""
-    total_quality_points = 0.0
-    total_credits = 0.0
+def calculate_overall_gpa(gpa_data: dict, gpa_scale_df: pd.DataFrame) -> float:
+    """Calculates the overall GPA weighted by course credits."""
+# [ ... calculate_overall_gpa function remains unchanged ... ]
+    total_credits = 0
+    total_gpa_points = 0
     
-    for subject in subjects:
-        grade_results = calculate_subject_grade(subject)
-        percentage = grade_results['current_percentage']
-        credits = subject.get('credits', 0.0)
-
-        if percentage is not None and credits > 0:
-            if percentage >= 93: letter = 'A+'
-            elif percentage >= 90: letter = 'A'
-            elif percentage >= 87: letter = 'A-'
-            elif percentage >= 83: letter = 'B+'
-            elif percentage >= 80: letter = 'B'
-            elif percentage >= 77: letter = 'B-'
-            elif percentage >= 73: letter = 'C+'
-            elif percentage >= 70: letter = 'C'
-            elif percentage >= 67: letter = 'C-'
-            elif percentage >= 63: letter = 'D+'
-            elif percentage >= 60: letter = 'D'
-            elif percentage >= 57: letter = 'D-'
-            else: letter = 'F'
+    for course_name, data in gpa_data.items():
+        # Handle cases where the data might be corrupted or empty
+        if 'assignments' not in data or data['assignments'].empty:
+            continue
             
-            gpa_value = gpa_scale.get(letter, 0.0)
-            total_quality_points += (gpa_value * credits)
-            total_credits += credits
+        # Use the grade based on completion status
+        current_grade_on_completed, _, total_completed_weight, projected_final_grade = calculate_course_grade(data)
+        
+        # If all work is complete, use the projected final grade, otherwise use current grade on completed work
+        final_grade_used = projected_final_grade if total_completed_weight >= 100 else current_grade_on_completed
 
+        course_credits = data['Course Credits']
+        
+        # Find the GPA value corresponding to the current grade
+        gpa_value = 0.0
+        # Sort scale descending to ensure we pick the highest letter grade achieved
+        for _, row in gpa_scale_df.sort_values(by='Min Grade (%)', ascending=False).iterrows():
+            if final_grade_used >= row['Min Grade (%)']:
+                gpa_value = row['GPA Value']
+                break
+        
+        total_credits += course_credits
+        total_gpa_points += gpa_value * course_credits
+        
     if total_credits > 0:
-        return total_quality_points / total_credits
+        return total_gpa_points / total_credits
     return 0.0
 
-# --- UI Helper Functions ---
 
-def add_new_subject():
-    """Adds a new default subject to the list."""
-    new_subject = {
-        'id': str(uuid.uuid4()),
-        'name': 'New Course',
-        'credits': 3.0,
-        'target_grade': 85.0,
-        'assignments': [
-            {'id': str(uuid.uuid4()), 'type': 'Test', 'weight': 50.0, 'name': 'Exam 1', 'grade': None},
-        ]
-    }
-    st.session_state.subjects.append(new_subject)
-    st.session_state.selected_subject_id = new_subject['id']
-
-def select_subject(subject_id):
-    """Handles subject selection via sidebar buttons."""
-    st.session_state.selected_subject_id = subject_id
-
-def toggle_deletion_mode():
-    """Toggles the deletion mode on and off."""
-    st.session_state.deletion_mode = not st.session_state.deletion_mode
-    if not st.session_state.deletion_mode:
-        st.session_state.subjects_to_delete = set()
-
-def confirm_delete_subjects():
-    """Deletes all subjects marked for deletion."""
-    ids_to_delete = st.session_state.subjects_to_delete
-    if ids_to_delete:
-        st.session_state.subjects = [
-            s for s in st.session_state.subjects 
-            if s['id'] not in ids_to_delete
-        ]
-        
-        if st.session_state.selected_subject_id in ids_to_delete:
-            if st.session_state.subjects:
-                st.session_state.selected_subject_id = st.session_state.subjects[0]['id']
-            else:
-                st.session_state.selected_subject_id = None
-        
-        st.session_state.deletion_mode = False
-        st.session_state.subjects_to_delete = set()
-
-def render_gpa_config():
-    """Renders the GPA scale configuration using a data editor."""
-    st.subheader("School GPA Scale Configuration")
+def optimize_required_score(course_data: dict, target_grade: float) -> tuple[float, float, float]:
+    """
+    Calculates the minimum required average score on remaining assignments to hit the target.
+    Returns: (required_score, remaining_weight_percent, weighted_completed_grade)
+    """
+# [ ... optimize_required_score function remains unchanged ... ]
+    df = course_data['assignments'].copy()
     
-    gpa_data = pd.DataFrame([
-        {'Letter Grade': k, 'GPA Value': v} 
-        for k, v in st.session_state.gpa_scale.items()
-    ])
-    
-    edited_gpa_df = st.data_editor(
-        gpa_data,
-        num_rows="dynamic",
-        column_config={
-            "Letter Grade": st.column_config.TextColumn("Letter Grade (e.g., A, B+)", required=True),
-            "GPA Value": st.column_config.NumberColumn("GPA Value (4.0 Scale)", min_value=0.0, max_value=4.3, step=0.1, required=True),
-        },
-        hide_index=True,
-        key="gpa_editor"
-    )
+    # Ensure target grade is between 0 and 100
+    target_grade = max(0.0, min(100.0, target_grade))
 
-    new_gpa_scale = {}
-    for index, row in edited_gpa_df.iterrows():
-        grade = str(row['Letter Grade']).strip().upper()
-        value = row['GPA Value']
-        if grade and value is not None:
-            new_gpa_scale[grade] = float(value)
-            
-    if new_gpa_scale:
-        st.session_state.gpa_scale = new_gpa_scale
+    # 1. Calculate weighted completed grade
+    df['Normalized Weight'] = df['Weight (%)'] / 100
+    df['Weighted Completed Grade'] = np.where(df['Completed'], df['Normalized Weight'] * df['Grade (%)'], 0.0)
+    weighted_completed_grade = df['Weighted Completed Grade'].sum()
+    
+    # 2. Calculate remaining weight
+    remaining_assignments = df[df['Completed'] == False]
+    remaining_weight_percent = remaining_assignments['Weight (%)'].sum()
+    remaining_weight_normalized = remaining_weight_percent / 100
 
-def render_subject_selector(current_gpa):
-    """Renders the list of subjects and overall GPA."""
-    st.sidebar.markdown("## 📈 Overall Performance")
-    st.sidebar.metric("Calculated GPA", f"{current_gpa:.2f}")
-    
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("Registered Subjects")
-    
-    if st.session_state.deletion_mode:
-        st.sidebar.warning("Check the box next to subjects you wish to delete.")
-        
-        for subject in st.session_state.subjects:
-            subject_id = subject['id']
-            is_checked = subject_id in st.session_state.subjects_to_delete
-            
-            checkbox_state = st.sidebar.checkbox(
-                f"Delete: **{subject['name']}**", 
-                value=is_checked, 
-                key=f"del_check_{subject_id}"
-            )
-            
-            if checkbox_state and subject_id not in st.session_state.subjects_to_delete:
-                st.session_state.subjects_to_delete.add(subject_id)
-            elif not checkbox_state and subject_id in st.session_state.subjects_to_delete:
-                st.session_state.subjects_to_delete.remove(subject_id)
-        
-        if st.session_state.subjects_to_delete:
-            num_to_delete = len(st.session_state.subjects_to_delete)
-            st.sidebar.markdown("---")
-            st.sidebar.button(
-                f"✅ Confirm Delete {num_to_delete} Subject{'s' if num_to_delete > 1 else ''}", 
-                on_click=confirm_delete_subjects, 
-                use_container_width=True, 
-                type="primary"
-            )
-            
+    if remaining_weight_normalized == 0:
+        # If all assignments are completed, the required score is just the final projected grade
+        _, _, _, final_grade = calculate_course_grade(course_data)
+        required_score = final_grade
     else:
-        for subject in st.session_state.subjects:
-            grade_results = calculate_subject_grade(subject)
-            percentage = grade_results['current_percentage']
-            
-            grade_status = f"({percentage:.1f}%)" if percentage is not None else "(No Grades)"
-            button_label = f"{subject['name']} {grade_status}"
-            
-            is_selected = st.session_state.selected_subject_id == subject['id']
-            button_type = "primary" if is_selected else "secondary"
-            
-            if st.sidebar.button(
-                button_label, 
-                key=f"select_sub_{subject['id']}", 
-                on_click=select_subject, 
-                args=(subject['id'],), 
-                use_container_width=True,
-                type=button_type
-            ):
-                pass
+        # 3. Calculate the required weighted score from the remaining work
+        required_weighted_remaining = target_grade - weighted_completed_grade
+        
+        # 4. Calculate the required average grade on remaining work
+        required_score = required_weighted_remaining / remaining_weight_normalized
+    
+    # Cap score at 100% and provide feedback
+    score_to_hit = max(0.0, required_score)
+        
+    return score_to_hit, remaining_weight_percent, weighted_completed_grade
+
+# --- NEW: Change Detection Helper ---
+
+def assignments_to_comparable_string(df: pd.DataFrame) -> str:
+# [ ... assignments_to_comparable_string function remains unchanged ... ]
+    """
+    Converts the essential assignment data into a hashable string for change detection.
+    Focuses on columns that drive calculations: Weight, Grade, and Completion status.
+    """
+    if df.empty:
+        return ""
+    
+    # Select critical columns, convert to string, fill NaNs (for Grade)
+    df_compare = df[['Assignment Name', 'Weight (%)', 'Grade (%)', 'Completed']].copy()
+    df_compare['Grade (%)'] = df_compare['Grade (%)'].fillna(-1.0) # Use a sentinel value for NaNs
+    
+    return df_compare.astype(str).to_csv(index=False)
+
+
+# --- UI Components ---
+
+def render_overall_performance():
+# [ ... render_overall_performance function remains unchanged ... ]
+    """Renders the sidebar with overall GPA and course selection/management."""
+    
+    st.sidebar.markdown("## 📈 Overall Performance")
+    overall_gpa = calculate_overall_gpa(st.session_state.gpa_data, st.session_state.gpa_scale)
+    st.sidebar.metric("Calculated GPA", f"{overall_gpa:.2f}")
 
     st.sidebar.markdown("---")
-    col_add, col_del = st.sidebar.columns(2)
+    st.sidebar.markdown("## 📚 Registered Subjects")
     
-    col_add.button("➕ Add New Course", on_click=add_new_subject, use_container_width=True)
+    # List all courses and their current grades
+    current_grades_list = []
+    for course_name, data in st.session_state.gpa_data.items():
+        # Using the grade on completed work for the sidebar display
+        current_grade, _, _, _ = calculate_course_grade(data) 
+        current_grades_list.append((course_name, current_grade))
     
-    delete_label = "❌ Cancel Deletion" if st.session_state.deletion_mode else "🗑️ Manage Subjects"
-    col_del.button(delete_label, on_click=toggle_deletion_mode, use_container_width=True)
+    # Display buttons for each course
+    for course_name, grade in current_grades_list:
+        # Show the grade based on completed work, unless all is done, then it's the final grade
+        display_grade, _, total_completed_weight, projected_final_grade = calculate_course_grade(st.session_state.gpa_data[course_name])
+        if total_completed_weight >= 100:
+             display_grade = projected_final_grade
+             
+        if st.sidebar.button(f"{course_name} ({display_grade:.1f}%)", 
+                             use_container_width=True, 
+                             type="primary" if course_name == st.session_state.current_course else "secondary"):
+            st.session_state.current_course = course_name
+            st.session_state.manage_mode = 'details' # Go to details view
+            st.session_state.delete_mode = False # Exit delete mode
+            st.rerun() # Force rerun to load new course details
 
-
-def assignments_to_comparable_string(assignments):
-    """Convert assignments to a string representation for comparison."""
-    return str(sorted([(a['name'], a['weight'], a['grade']) for a in assignments]))
+    st.sidebar.markdown("---")
+    
+    # Management Buttons
+    col1, col2 = st.sidebar.columns(2)
+    if col1.button("➕ Add New Course", use_container_width=True):
+        st.session_state.manage_mode = 'add'
+        st.session_state.current_course = None # Deselect current course
+        st.session_state.delete_mode = False
+        st.rerun()
+    
+    if col2.button("🗑️ Manage Subjects", use_container_width=True):
+        st.session_state.manage_mode = 'delete'
+        st.session_state.current_course = None # Deselect current course
+        st.session_state.delete_mode = False
+        st.rerun()
 
 
 def render_subject_details():
-    """Renders the assignments, target grade, and required score for the selected subject."""
-    selected_id = st.session_state.selected_subject_id
-    if not selected_id:
-        st.info("Select a subject from the sidebar to view details.")
-        return
+    """Renders the main content area for the current subject's details and assignments."""
+    
+    course_name = st.session_state.current_course
+    course_data = st.session_state.gpa_data[course_name]
+    
+    st.header(f"Subject: {course_name}")
 
-    try:
-        subject_index = next((i for i, s in enumerate(st.session_state.subjects) if s['id'] == selected_id))
-    except StopIteration:
-        st.info("The previously selected subject was deleted. Please select a new subject from the sidebar.")
-        st.session_state.selected_subject_id = None
-        return
+    # Calculate Grades
+    current_grade_on_completed, weighted_completed_grade, total_completed_weight, projected_final_grade = calculate_course_grade(course_data)
+    target_grade = course_data['Target Course Grade (%)']
+    
+    # Metadata and Target Grade Inputs
+    meta_col1, meta_col2 = st.columns([1, 1])
+    
+    with meta_col1:
+        new_credits = st.number_input("Course Credits", value=course_data['Course Credits'], min_value=0.5, step=0.5, key=f'credits_{course_name}')
+        # Update credits if changed
+        if new_credits != course_data['Course Credits']:
+            st.session_state.gpa_data[course_name]['Course Credits'] = new_credits
 
-    subject = st.session_state.subjects[subject_index]
-    
-    subject['name'] = st.text_input("Course Name", value=subject['name'], key=f"name_{selected_id}")
-    st.header(f"Subject: {subject['name']}")
-
-    col_c, col_t = st.columns(2)
-    
-    new_credits = col_c.number_input("Course Credits", min_value=0.0, max_value=10.0, value=subject['credits'], step=0.5, key=f"credits_{selected_id}")
-    new_target = col_t.number_input("Target Course Grade (%)", min_value=0.0, max_value=100.0, value=subject['target_grade'], step=0.1, key=f"target_{selected_id}")
-    
-    subject['credits'] = new_credits
-    subject['target_grade'] = new_target
-
-    st.subheader("Assignment Weights and Grades")
-    
-    # Store current state snapshot before editor
-    prev_state_key = f"prev_{selected_id}"
-    prev_state = st.session_state.prev_assignments_state.get(prev_state_key, "")
-    
-    # Create DataFrame directly from session state
-    assignments_data = []
-    for assignment in subject['assignments']:
-        assignments_data.append({
-            'Type': assignment['type'],
-            'Weight': assignment['weight'],
-            'Assignment Name': assignment['name'],
-            'Grade (%)': assignment['grade']
-        })
-    
-    df_display = pd.DataFrame(assignments_data) if assignments_data else pd.DataFrame(
-        columns=['Type', 'Weight', 'Assignment Name', 'Grade (%)']
-    )
-
-    # Render the data editor
-    edited_df = st.data_editor(
-        df_display,
-        num_rows="dynamic",
-        column_config={
-            "Type": st.column_config.SelectboxColumn(
-                "Type", 
-                options=["Homework", "Test", "Quiz", "Project", "Final", "General"], 
-                required=True
-            ),
-            "Weight": st.column_config.NumberColumn(
-                "Weight", 
-                min_value=0, 
-                max_value=100, 
-                step=0.1, 
-                required=True, 
-                help="The weight of this assignment category."
-            ),
-            "Assignment Name": st.column_config.TextColumn("Assignment Name", required=True),
-            "Grade (%)": st.column_config.NumberColumn(
-                "Grade (%)", 
-                min_value=0, 
-                max_value=100, 
-                step=0.1, 
-                help="Leave blank for ungraded assignments."
-            ),
-        },
-        hide_index=True,
-        key=f"assignments_editor_{selected_id}"
-    )
-
-    # Process edited data and update session state
-    updated_assignments = []
-    original_ids = [a['id'] for a in subject['assignments']]
-    
-    for i, row in edited_df.iterrows():
-        # Skip empty rows
-        if not str(row['Assignment Name']).strip():
-            continue
+    with meta_col2:
+        new_target = st.number_input("Target Course Grade (%)", value=target_grade, min_value=0.0, max_value=100.0, step=0.1, key=f'target_{course_name}')
+        # Update target if changed
+        if new_target != course_data['Target Course Grade (%)']:
+            st.session_state.gpa_data[course_name]['Target Course Grade (%)'] = new_target
+            st.rerun() 
             
-        # Preserve ID if row existed, otherwise create new
-        assignment_id = original_ids[i] if i < len(original_ids) else str(uuid.uuid4())
+    st.markdown("---")
+
+    # --- Feature 1: Grade Optimization Result ---
+    st.subheader("🎯 Optimization: Score Needed to Hit Target")
+    
+    target_grade = st.session_state.gpa_data[course_name]['Target Course Grade (%)']
+
+    required_score, remaining_weight, weighted_completed_grade = optimize_required_score(course_data, target_grade)
+    
+    col_req_1, col_req_2, col_req_3 = st.columns(3)
+    
+    # Display logic for Current Grade / Final Grade
+    grade_to_display = current_grade_on_completed
+    grade_label = "Current Grade (Completed Work)"
+    
+    if total_completed_weight >= 100:
+        grade_to_display = projected_final_grade
+        grade_label = "Final Grade"
         
-        assignment_type = str(row['Type']).strip() if pd.notna(row['Type']) else "General"
-        assignment_name = str(row['Assignment Name']).strip() if pd.notna(row['Assignment Name']) else "New Item"
-        weight_value = float(row['Weight']) if pd.notna(row['Weight']) else 0.0
+    with col_req_1:
+        st.metric(grade_label, f"**{grade_to_display:.1f}%**")
         
-        # Handle grade value - preserve None for ungraded
-        grade_value = None
-        if pd.notna(row['Grade (%)']):
-            try:
-                grade_value = float(row['Grade (%)'])
-            except (ValueError, TypeError):
-                grade_value = None
+    with col_req_2:
+        st.metric("Target Grade", f"**{target_grade:.1f}%**")
+    with col_req_3:
+        st.metric("Remaining Weight", f"**{remaining_weight:.0f}%**")
 
-        updated_assignments.append({
-            'id': assignment_id,
-            'type': assignment_type,
-            'weight': weight_value,
-            'name': assignment_name,
-            'grade': grade_value
-        })
+    if remaining_weight > 0:
+        # Calculate the minimum possible final grade (if the student scores 0% on all remaining work)
+        min_possible_final_grade = weighted_completed_grade
+        
+        if required_score > 100.0:
+            st.error(f"**Goal Unachievable:** You currently need an average of **{required_score:.1f}%** on the remaining **{remaining_weight:.0f}%** of work to hit your target. Since a score above 100% is impossible, you should adjust your target grade.")
+        
+        # Check if the target is secured (even with 0% on remaining work)
+        # Added check for target_grade > 0.0 to prevent confusing "Target Secured" messages for a 0% target
+        elif min_possible_final_grade >= target_grade and target_grade > 0.0:
+            st.success(f"**Target Secured!** You currently need an average of **0.0%** on remaining work to hit your target of **{target_grade:.1f}%** (i.e., you can skip the remaining assignments and still hit the target).")
+        
+        # Handle the confusing 0.0% target scenario
+        elif target_grade == 0.0 and min_possible_final_grade >= 0.0:
+             st.success(f"**Target Hit:** Your current weighted score of **{min_possible_final_grade:.1f}%** already surpasses your target of **0.0%**. You need 0.0% average on remaining work.")
+             
+        # Check if the target is 0% and the goal is not secured, meaning they missed too many assignments (this is unlikely unless grades are negative)
+        elif target_grade == 0.0 and min_possible_final_grade < 0.0: 
+             st.error(f"**Goal Unachievable:** Your current weighted score is **{min_possible_final_grade:.1f}%**, which is below your target of 0.0%. You can no longer achieve your target, even if you score 100% on the remaining work.")
 
-    # Check if assignments changed
-    new_state = assignments_to_comparable_string(updated_assignments)
-    assignments_changed = (new_state != prev_state)
-    
-    # Update session state
-    st.session_state.subjects[subject_index]['assignments'] = updated_assignments
-    st.session_state.prev_assignments_state[prev_state_key] = new_state
-    
-    # Force rerun if data changed
-    if assignments_changed and prev_state != "":
-        st.rerun()
-
-    # Calculate and display results
-    grade_results = calculate_subject_grade(subject)
-    
-    current_grade_pct = grade_results['current_percentage']
-    total_weight_graded = grade_results['total_weight_graded']
-    total_course_weight = grade_results['total_course_weight']
-    required_grade = grade_results['required_grade']
+        else:
+            # The required score is between 0% and 100% (or the target is 0.0% and they haven't secured it)
+            st.warning(f"**Required Average:** You need to score an average of **{required_score:.1f}%** on the remaining **{remaining_weight:.0f}%** of assignments to hit your target grade.")
+            
+    else:
+        # When all work is completed (Remaining Weight is 0%), show the comparison to the target
+        if projected_final_grade >= target_grade:
+            st.success(f"**All Work Graded:** Your final course grade is **{projected_final_grade:.1f}%**, which **meets or exceeds** your target of {target_grade:.1f}%.")
+        else:
+            st.error(f"**All Work Graded:** Your final course grade is **{projected_final_grade:.1f}%**, which is **below** your target of {target_grade:.1f}%.")
 
     st.markdown("---")
-    st.subheader("Current Grade & Target Projection")
     
-    col1, col2, col3 = st.columns(3)
+    # --- Feature 2: Assignment Tracker ---
+# [ ... rest of render_subject_details remains unchanged ... ]
+    st.subheader("📝 Assignment Weights and Grades")
     
-    if current_grade_pct is not None:
-        graded_pct_of_course = (total_weight_graded / total_course_weight) * 100.0 if total_course_weight > 0 else 0
-        col1.metric("Current Grade", f"{current_grade_pct:.1f}%", help=f"Based on {graded_pct_of_course:.0f}% of the total course weight.")
+    # Toggle Delete Mode
+    def toggle_delete_mode():
+        st.session_state.delete_mode = not st.session_state.delete_mode
+        # Reset deletion marks when changing mode
+        if 'Delete?' in st.session_state.gpa_data[course_name]['assignments'].columns:
+            st.session_state.gpa_data[course_name]['assignments']['Delete?'] = False
+        st.rerun()
+
+    def delete_marked_rows():
+        df = st.session_state.gpa_data[course_name]['assignments']
+        rows_to_delete_count = df['Delete?'].sum()
+        if rows_to_delete_count > 0:
+            df_retained = df[df['Delete?'] == False].copy()
+            df_retained['Delete?'] = False
+            st.session_state.gpa_data[course_name]['assignments'] = df_retained
+            st.success(f"Successfully deleted {rows_to_delete_count} assignment(s).")
+        st.session_state.delete_mode = False
+        st.rerun()
+
+    if st.session_state.delete_mode:
+        st.markdown("### 🗑️ Delete Mode: Check assignments to remove, then confirm.")
     else:
-        col1.metric("Current Grade", "N/A", help="No assignments have been graded yet.")
+        st.markdown("### Edit Assignments:")
 
-    col2.metric("Target Grade", f"{subject['target_grade']:.1f}%")
+    
+    # Column Configuration
+    base_config = {
+        'Type': st.column_config.TextColumn("Type (e.g., HW, Quiz)"),
+        'Weight (%)': st.column_config.NumberColumn("Weight (%)", min_value=0, max_value=100, step=1, required=True),
+        'Assignment Name': st.column_config.TextColumn("Assignment Name", required=True),
+        'Grade (%)': st.column_config.NumberColumn("Grade (%)", min_value=0.0, max_value=100.0, step=0.1, help="Leave blank for remaining/ungraded assignments."),
+        'Completed': st.column_config.CheckboxColumn("Completed?", default=False)
+    }
 
-    remaining_pct_of_course = ((total_course_weight - total_weight_graded) / total_course_weight) * 100.0 if total_course_weight > 0 else 0
+    df_assignments = course_data['assignments'].copy()
 
-    if remaining_pct_of_course == 0:
-        col3.metric("Required on Remaining", "N/A", help="All course weight is accounted for.")
-    elif required_grade is not None:
-        if required_grade > 100.0:
-            col3.metric("Required on Remaining", "Impossible", delta=f"Need >100%", delta_color="inverse", help="It is mathematically impossible to reach your target grade.")
-        elif required_grade < 0.0:
-            col3.metric("Required on Remaining", "0.0%", delta="Target already met!", delta_color="normal", help="You have already exceeded your target grade!")
+    if st.session_state.delete_mode:
+        # In Delete Mode: Show all columns and disable editing on non-delete columns
+        editor_config = base_config.copy()
+        for col in base_config:
+            editor_config[col] = base_config[col].copy()
+            editor_config[col].disabled = True
+        
+        editor_config["Delete?"] = st.column_config.CheckboxColumn("Mark to Delete", default=False)
+        df_to_edit = df_assignments
+        editor_key = f"assignment_editor_{course_name}_delete"
+
+    else:
+        # In Edit Mode: Hide the Delete? column
+        df_to_edit = df_assignments.drop(columns=['Delete?'])
+        editor_config = base_config
+        editor_key = f"assignment_editor_{course_name}_edit"
+
+    # Editable Dataframe
+    edited_df = st.data_editor(
+        df_to_edit,
+        num_rows="dynamic",
+        column_config=editor_config,
+        hide_index=True,
+        key=editor_key
+    )
+
+    # CRITICAL: Session State Update Logic and Change Detection
+    
+    # 1. Update the Completed status based on Grade (%) field
+    edited_df['Completed'] = edited_df['Grade (%)'].apply(lambda x: True if pd.notna(x) else False)
+    
+    # Ensure the 'Delete?' column is maintained across edits/deletions
+    df_assignments_current = st.session_state.gpa_data[course_name]['assignments']
+    
+    if st.session_state.delete_mode:
+        # In delete mode, the editor output is the full dataframe
+        new_df = edited_df.copy()
+    else: 
+        # In edit mode, merge back the 'Delete?' column data
+        new_length = len(edited_df)
+        old_delete_data = df_assignments_current['Delete?'].values
+        old_length = len(old_delete_data)
+
+        # Rebuild the 'Delete?' list for the new dataframe length
+        if new_length > old_length:
+            new_delete_data = list(old_delete_data) + [False] * (new_length - old_length)
+        elif new_length < old_length:
+            new_delete_data = old_delete_data[:new_length].tolist()
         else:
-            col3.metric("Required on Remaining", f"{required_grade:.1f}%", help=f"You need a {required_grade:.1f}% average on the remaining {remaining_pct_of_course:.0f}% of the course.")
-    else:
-        col3.metric("Required on Remaining", "N/A", help="Cannot calculate. Ensure all assignments have a valid weight.")
+            new_delete_data = old_delete_data.tolist()
 
+        new_df = edited_df.copy().reset_index(drop=True)
+        
+        if len(new_delete_data) == len(new_df):
+            new_df['Delete?'] = new_delete_data
+        else:
+             # Fallback: if lengths mismatch unexpectedly
+            new_df['Delete?'] = [False] * len(new_df) 
+            
+    # 2. Update session state with the new DataFrame
+    st.session_state.gpa_data[course_name]['assignments'] = new_df
+    
+    # 3. Change Detection and Rerun Logic
+    current_state_string = assignments_to_comparable_string(new_df)
+    prev_state_key = f'prev_assignments_state_{course_name}'
+    
+    # Check if a state change occurred
+    if prev_state_key not in st.session_state.prev_assignments_state or \
+       st.session_state.prev_assignments_state[prev_state_key] != current_state_string:
+        
+        # Update the tracked state
+        st.session_state.prev_assignments_state[prev_state_key] = current_state_string
+        
+        # Check if the change was substantial enough to warrant a rerun 
+        if not df_assignments_current.equals(new_df):
+            st.rerun()
+
+    # Buttons for delete mode management
+    btn_col1, btn_col2, _ = st.columns([1.5, 1.5, 3])
+    if st.session_state.delete_mode:
+        btn_col1.button("✅ Confirm Deletion", on_click=delete_marked_rows, type="primary")
+        btn_col2.button("❌ Cancel Deletion Mode", on_click=toggle_delete_mode, type="secondary")
+    else:
+        btn_col1.button("🗑️ Enter Deletion Mode", on_click=toggle_delete_mode, type="secondary")
+        
+    # Validation Check
+    if st.session_state.gpa_data[course_name]['assignments']['Weight (%)'].sum() != 100:
+        st.error(f"⚠️ Warning: Total assignment weight is **{st.session_state.gpa_data[course_name]['assignments']['Weight (%)'].sum()}%**. It should ideally sum to 100%.")
+
+def render_add_course():
+# [ ... render_add_course function remains unchanged ... ]
+    """Renders the UI for adding a new course."""
+    st.header("➕ Add New Course")
+    
+    new_course_name = st.text_input("New Course Name", key="new_course_name_input")
+    new_credits = st.number_input("Course Credits", value=3.0, min_value=0.5, step=0.5, key="new_credits_input")
+    new_target = st.number_input("Target Course Grade (%)", value=90.0, min_value=0.0, max_value=100.0, step=0.1, key="new_target_input")
+    
+    if st.button("Add Course and Go to Details", type="primary"):
+        if new_course_name in st.session_state.gpa_data:
+            st.error("A course with this name already exists.")
+        elif not new_course_name.strip():
+            st.error("Course name cannot be empty.")
+        else:
+            st.session_state.gpa_data[new_course_name] = {
+                'Course Credits': new_credits,
+                'Target Course Grade (%)': new_target,
+                'assignments': pd.DataFrame({
+                    'Type': ['Homework', 'Exam'],
+                    'Weight (%)': [40, 60],
+                    'Assignment Name': ['New HW Avg', 'New Exam'],
+                    'Grade (%)': [None, None],
+                    'Completed': [False, False],
+                    'Delete?': [False, False]
+                })
+            }
+            st.session_state.current_course = new_course_name
+            st.session_state.manage_mode = 'details'
+            st.rerun()
+
+def render_manage_courses():
+# [ ... render_manage_courses function remains unchanged ... ]
+    """Renders the UI for deleting existing courses."""
+    st.header("🗑️ Manage Existing Subjects")
+    
+    if not st.session_state.gpa_data:
+        st.info("No courses to manage.")
+        return
+        
+    st.warning("Select courses below to permanently delete them.")
+    
+    courses_to_delete = []
+    
+    for course_name in list(st.session_state.gpa_data.keys()):
+        if st.checkbox(f"Delete {course_name}?", key=f'delete_course_{course_name}'):
+            courses_to_delete.append(course_name)
+
+    if courses_to_delete:
+        if st.button(f"Confirm Delete {len(courses_to_delete)} Course(s)", type="primary"):
+            for course_name in courses_to_delete:
+                del st.session_state.gpa_data[course_name]
+                # Also delete its change tracking state
+                prev_state_key = f'prev_assignments_state_{course_name}'
+                if prev_state_key in st.session_state.prev_assignments_state:
+                    del st.session_state.prev_assignments_state[prev_state_key]
+
+            # Reset current course if it was deleted
+            if st.session_state.current_course in courses_to_delete or not st.session_state.gpa_data:
+                st.session_state.current_course = next(iter(st.session_state.gpa_data)) if st.session_state.gpa_data else None
+            
+            st.success("Selected courses deleted.")
+            st.session_state.manage_mode = 'details'
+            st.rerun()
+            
+    if st.button("Cancel Management", type="secondary"):
+        st.session_state.manage_mode = 'details'
+        if st.session_state.gpa_data:
+            st.session_state.current_course = next(iter(st.session_state.gpa_data))
+        st.rerun()
+
+def render_gpa_scale_config():
+# [ ... render_gpa_scale_config function remains unchanged ... ]
+    """Renders the editable GPA scale configuration."""
+    st.header("School GPA Scale Configuration")
+    
+    # Editable Dataframe for the GPA scale
+    edited_gpa_df = st.data_editor(
+        st.session_state.gpa_scale,
+        column_config={
+            'Letter Grade (e.g., A, B+)': st.column_config.TextColumn("Letter Grade", required=True),
+            'Min Grade (%)': st.column_config.NumberColumn("Min Grade (%)", min_value=0.0, max_value=100.0, step=0.1, required=True),
+            'GPA Value': st.column_config.NumberColumn("GPA Value", min_value=0.0, max_value=5.0, step=0.1, required=True)
+        },
+        num_rows="fixed", # GPA scale should not be dynamically added/removed
+        hide_index=True,
+        key='gpa_scale_editor'
+    )
+    # Update the session state with the edited GPA scale
+    st.session_state.gpa_scale = edited_gpa_df
 
 # --- Main App Execution ---
 
-st.title("📚 Personalized Learning Path: Grade Tracker")
-st.markdown("Set your school's GPA scale, track your assignments, and project the score you need on remaining work to hit your grade targets.")
+def app_main():
+# [ ... app_main function remains unchanged ... ]
+    initialize_data()
 
-# Calculate GPA first
-current_gpa = calculate_gpa(st.session_state.subjects, st.session_state.gpa_scale)
+    st.set_page_config(layout="wide")
 
-main_col, config_col = st.columns([2.5, 1.5])
+    st.title("📚 Personalized Learning Path: Grade Tracker (GradeLink)")
+    st.markdown("Set your school's GPA scale, track your assignments, and project the score you need on remaining work to hit your grade targets.")
+    
+    # Sidebar Rendering (must be called first so all calculations reflect latest state)
+    render_overall_performance()
 
-render_subject_selector(current_gpa)
+    # Main Content Area
+    main_col, scale_col = st.columns([2, 1])
+    
+    with scale_col:
+        render_gpa_scale_config()
+        
+    with main_col:
+        # Display the main content based on the current mode
+        if st.session_state.manage_mode == 'add':
+            render_add_course()
+        elif st.session_state.manage_mode == 'delete':
+            render_manage_courses()
+        elif st.session_state.current_course and st.session_state.manage_mode == 'details':
+            render_subject_details()
+        else:
+            st.info("Use the sidebar to add a new course to get started!")
 
-with config_col:
-    render_gpa_config()
-
-with main_col:
-    render_subject_details()
+if __name__ == '__main__':
+    app_main()
