@@ -1,152 +1,169 @@
 import streamlit as st
-import pandas as pd
-import numpy as np
+import csv
+import random
+import os
+from datetime import datetime, timedelta
+
+QUESTIONS_PER_QUIZ = 5
+DEFAULT_DATASET = "quiz_data.csv"
+RESULTS_CSV = "quiz_results.csv"
+
+
+def load_quiz_data(filename: str):
+    quiz_data = {}
+    with open(filename, newline="", encoding="utf-8") as csvfile:
+        reader = csv.DictReader(csvfile)
+        for row in reader:
+            subject = row["Subject"].title()
+            difficulty = row["Difficulty"].title()
+            question = row["Question"]
+            options = [row["Option1"], row["Option2"], row["Option3"], row["Option4"]]
+            answer = row["Answer"]
+            if subject not in quiz_data:
+                quiz_data[subject] = {}
+            if difficulty not in quiz_data[subject]:
+                quiz_data[subject][difficulty] = []
+            quiz_data[subject][difficulty].append((question, options, answer))
+    return quiz_data
+
+
+def ensure_results_header(path: str):
+    """Ensure the results file exists and has the correct columns."""
+    if not os.path.exists(path) or os.path.getsize(path) == 0:
+        with open(path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow([
+                "timestamp", "user_id", "subject", "difficulty",
+                "score", "total", "dataset", "attempt_no", "time_spent(mins)"
+            ])
+
+
+def log_result(user_id: str, subject: str, difficulty: str, score: int, total: int,
+               dataset_path: str, start_time: datetime):
+    """Log quiz result with attempt tracking and time spent."""
+    ensure_results_header(RESULTS_CSV)
+
+    # Determine current attempt number for this user & subject
+    attempt_no = 1
+    if os.path.exists(RESULTS_CSV):
+        with open(RESULTS_CSV, newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            attempts = [
+                row for row in reader
+                if row["user_id"] == user_id and row["subject"].title() == subject.title()
+            ]
+            if attempts:
+                attempt_no = len(attempts) + 1
+
+    # Calculate real time spent (in minutes)
+    end_time = datetime.now()
+    time_spent = round((end_time - start_time).total_seconds() / 60, 2)
+
+    # Write result row
+    with open(RESULTS_CSV, "a", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow([
+            end_time.isoformat(timespec="seconds"),
+            user_id,
+            subject,
+            difficulty,
+            score,
+            total,
+            os.path.basename(dataset_path),
+            attempt_no,
+            time_spent
+        ])
+
 
 def run():
-    st.set_page_config(page_title="Knowledge Gap Detector", layout="wide")
-    st.title("🧩 Knowledge Gap Detector")
-    st.write("""
-    This system analyzes your quiz performance using **Adaptive Weighted Optimization**,
-    predicts your next scores, your percentile, and gives personalized recommendations.
-    """)
+    st.set_page_config(page_title="Personalized Learning Quiz", layout="centered")
+    st.title("📝 Personalized Learning Quiz")
+    st.write("Take quizzes by selecting a subject and difficulty level!")
 
-    uploaded_file = "quiz_results.csv"
-
+    # --- Load quiz data ---
     try:
-        df = pd.read_csv(uploaded_file)
+        quiz_data = load_quiz_data(DEFAULT_DATASET)
     except FileNotFoundError:
-        st.error("No quiz results found. Please take a few quizzes first!")
+        st.error(f"Dataset not found: `{DEFAULT_DATASET}`. Please upload it first.")
         return
 
-    if df.empty:
-        st.warning("No data available yet.")
-        return
-
-    user_id = st.text_input("Enter your User ID:")
+    # --- User info ---
+    user_id = st.text_input("Enter your User ID (e.g., 101)")
     if not user_id:
-        st.info("Please enter your User ID to continue.")
+        st.info("Please enter your User ID to begin.")
+        return
+    if not user_id.isdigit():
+        st.error("User ID must be numeric.")
         return
 
-    df_user = df[df["user_id"].astype(str) == user_id]
-    if df_user.empty:
-        st.warning("No quiz history found for this User ID.")
-        return
+    # --- Subject & difficulty selection ---
+    subjects = list(quiz_data.keys())
+    subject = st.selectbox("Choose a Subject", subjects)
 
-    st.subheader(f"📚 Performance Summary for User {user_id}")
+    difficulties = list(quiz_data[subject].keys())
+    difficulty = st.selectbox("Choose Difficulty", difficulties)
 
-    subjects = df_user["subject"].unique()
-    overall_avg = df_user["score"].mean()
-    total_attempts = len(df_user)
+    # Store quiz state in Streamlit session
+    if "quiz_state" not in st.session_state:
+        st.session_state.quiz_state = None
 
-    st.markdown(f"**Total Quizzes Taken:** {total_attempts}")
-    st.markdown(f"**Overall Average Score:** {overall_avg:.2f}/5")
+    # --- Start quiz ---
+    if st.button("Start Quiz"):
+        questions = quiz_data[subject][difficulty]
+        if len(questions) == 0:
+            st.warning("No questions available for this selection.")
+            return
+        asked = random.sample(questions, min(QUESTIONS_PER_QUIZ, len(questions)))
+        st.session_state.quiz_state = {
+            "questions": asked,
+            "current": 0,
+            "score": 0,
+            "subject": subject,
+            "difficulty": difficulty,
+            "user_id": user_id,
+            "start_time": datetime.now()
+        }
 
-    predicted_scores = []
+    # --- Quiz in progress ---
+    if st.session_state.quiz_state:
+        state = st.session_state.quiz_state
+        current = state["current"]
+        total = len(state["questions"])
 
-    for subject in subjects:
-        df_sub = df_user[df_user["subject"] == subject].sort_values("timestamp")
-        scores = df_sub["score"].tolist()
+        if current < total:
+            q, options, answer = state["questions"][current]
+            st.subheader(f"Question {current+1}/{total}")
+            st.write(q)
+            choice = st.radio("Select your answer:", options, key=f"q{current}")
 
-        if len(scores) == 0:
-            continue
+            if st.button("Submit Answer", key=f"submit{current}"):
+                if choice == answer:
+                    st.success("✅ Correct!")
+                    state["score"] += 1
+                else:
+                    st.error(f"❌ Wrong! Correct Answer: {answer}")
+                state["current"] += 1
+                st.rerun()
 
-        current_score = int(scores[-1])
-        n = len(scores)
-
-        # ✅ Adaptive Weighted Prediction (uses all attempts fairly)
-        if n <= 3:
-            weights = [0.1, 0.3, 0.6][:n]
         else:
-            weights = np.linspace(0.4, 1.0, n)
-            weights = weights / weights.sum()
+            st.subheader("🎯 Quiz Finished!")
+            st.write(f"**Score:** {state['score']} / {total}")
 
-        predicted_score = sum(w * s for w, s in zip(weights, scores))
-        predicted_score = max(0, int(round(predicted_score)))
-        predicted_scores.append(predicted_score)
+            log_result(
+                state["user_id"],
+                state["subject"],
+                state["difficulty"],
+                state["score"],
+                total,
+                DEFAULT_DATASET,
+                state["start_time"],
+            )
 
-        # Trend detection based on entire score history
-        if len(scores) >= 2:
-            if scores[-1] > scores[-2]:
-                trend = "Improving"
-                reason = "your recent improvement suggests you're learning effectively."
-            elif scores[-1] < scores[-2]:
-                trend = "Declining"
-                reason = "recent drop may be due to harder questions or less revision."
-            else:
-                trend = "Stable"
-                reason = "your performance has remained consistent."
-        else:
-            trend = "Stable"
-            reason = "not enough attempts yet to detect a clear trend."
+            st.success("Results saved successfully!")
+            if st.button("Take another quiz"):
+                st.session_state.quiz_state = None
+                st.rerun()
 
-        # Generate readable history summary
-        score_history = " → ".join(str(int(s)) for s in scores)
-        if len(scores) > 3:
-            trend_comment = "You’ve shown steady participation with these scores."
-        else:
-            trend_comment = "Good start — continue to attempt more quizzes for stability."
-
-        # Recommendations
-        if predicted_score >= 4:
-            recommendation = "Excellent performance — consider taking harder quizzes to challenge yourself."
-        elif predicted_score >= 2:
-            recommendation = "Good effort — focus on revision to reach top levels."
-        else:
-            recommendation = "You need improvement — revisit the core concepts and practice daily."
-
-        st.markdown(f"""
-        ### 🧠 {subject}
-        **Current Score:** {current_score}/5  
-        **Predicted Next Score:** {predicted_score}/5  
-        **Trend:** {trend}  
-        **Why:** Your attempt history ({score_history}) shows this pattern; {reason}  
-        **Observation:** {trend_comment}  
-        **Recommendation:** {recommendation}
-        """)
-
-    # 🎯 Predicted Percentile (All Subjects)
-    st.divider()
-    st.subheader("📊 Predicted Percentile (All Subjects Combined)")
-
-    if len(predicted_scores) > 0:
-        user_pred_avg = np.mean(predicted_scores)
-        avg_scores_per_user = df.groupby("user_id")["score"].mean()
-        user_list = avg_scores_per_user.values
-
-        percentile = (np.sum(user_list < user_pred_avg) / len(user_list)) * 100
-        percentile = round(percentile, 2)
-
-        st.markdown(f"**Predicted Percentile:** {percentile:.2f}%")
-
-        # Motivation text
-        if percentile >= 90:
-            st.success("🥇 Top-tier performance — you're among the best! Keep this consistency.")
-        elif percentile >= 70:
-            st.info("💪 You’re performing very well — a little more effort can get you into the top group.")
-        elif percentile >= 40:
-            st.warning("⚙️ You’re making progress — consistent study will lift you further.")
-        else:
-            st.error("📘 You’re currently below average — focus on revision and retake key quizzes.")
-
-        st.markdown(f"💡 If you improve each subject by +1, your percentile could reach **{min(100, percentile + 10):.2f}%!**")
-
-    else:
-        st.info("Not enough data to calculate percentile yet.")
-
-    # 💪 Motivation Tracker
-    st.divider()
-    st.subheader("💪 Motivation Tracker")
-
-    early_avg = df_user.head(3)["score"].mean() if len(df_user) >= 3 else df_user["score"].mean()
-    recent_avg = df_user.tail(3)["score"].mean()
-    change = recent_avg - early_avg
-
-    if change > 0:
-        st.success(f"👏 You’ve improved by +{change:.1f} points recently! Keep going.")
-    elif change < 0:
-        st.warning(f"⚠️ Your average dropped by {abs(change):.1f} points — time to reinforce weak areas.")
-    else:
-        st.info("📘 Your performance is steady — aim higher in your next quiz!")
 
 if __name__ == "__main__":
     run()
