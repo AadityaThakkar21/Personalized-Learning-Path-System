@@ -2,7 +2,7 @@ import streamlit as st
 import csv
 import random
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 QUESTIONS_PER_QUIZ = 5
 DEFAULT_DATASET = "quiz_data.csv"
@@ -28,25 +28,52 @@ def load_quiz_data(filename: str):
 
 
 def ensure_results_header(path: str):
+    """Ensure the results file exists and has the correct columns."""
     if not os.path.exists(path) or os.path.getsize(path) == 0:
         with open(path, "w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
-            writer.writerow(["timestamp", "user_id", "subject", "difficulty", "score", "total", "dataset"])
+            writer.writerow([
+                "timestamp", "user_id", "subject", "difficulty",
+                "score", "total", "dataset", "attempt_no", "time_spent(mins)"
+            ])
 
 
-def log_result(user_id: str, subject: str, difficulty: str, score: int, total: int, dataset_path: str):
+def log_result(user_id: str, subject: str, difficulty: str, score: int, total: int,
+               dataset_path: str, start_time: datetime):
+    """Log quiz result with attempt tracking and time spent."""
     ensure_results_header(RESULTS_CSV)
+
+    # Determine current attempt number for this user & subject
+    attempt_no = 1
+    if os.path.exists(RESULTS_CSV):
+        with open(RESULTS_CSV, newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            attempts = [
+                row for row in reader
+                if row["user_id"] == user_id and row["subject"].title() == subject.title()
+            ]
+            if attempts:
+                attempt_no = len(attempts) + 1
+
+    # Calculate real time spent (in minutes)
+    end_time = datetime.now()
+    time_spent = round((end_time - start_time).total_seconds() / 60, 2)
+
+    # Write result row
     with open(RESULTS_CSV, "a", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
         writer.writerow([
-            datetime.now().isoformat(timespec="seconds"),
+            end_time.isoformat(timespec="seconds"),
             user_id,
             subject,
             difficulty,
             score,
             total,
             os.path.basename(dataset_path),
+            attempt_no,
+            time_spent
         ])
+
 
 def run():
     st.set_page_config(page_title="Personalized Learning Quiz", layout="centered")
@@ -76,9 +103,11 @@ def run():
     difficulties = list(quiz_data[subject].keys())
     difficulty = st.selectbox("Choose Difficulty", difficulties)
 
+    # Store quiz state in Streamlit session
     if "quiz_state" not in st.session_state:
         st.session_state.quiz_state = None
 
+    # --- Start quiz ---
     if st.button("Start Quiz"):
         questions = quiz_data[subject][difficulty]
         if len(questions) == 0:
@@ -92,6 +121,7 @@ def run():
             "subject": subject,
             "difficulty": difficulty,
             "user_id": user_id,
+            "start_time": datetime.now()
         }
 
     # --- Quiz in progress ---
@@ -118,6 +148,7 @@ def run():
         else:
             st.subheader("🎯 Quiz Finished!")
             st.write(f"**Score:** {state['score']} / {total}")
+
             log_result(
                 state["user_id"],
                 state["subject"],
@@ -125,7 +156,9 @@ def run():
                 state["score"],
                 total,
                 DEFAULT_DATASET,
+                state["start_time"],
             )
+
             st.success("Results saved successfully!")
             if st.button("Take another quiz"):
                 st.session_state.quiz_state = None
