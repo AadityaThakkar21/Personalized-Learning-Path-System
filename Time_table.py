@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 def run():
-    st.title("📚 Personalized Study Timetable Generator")
+    st.title("📅 Personalized Study Timetable Generator")
 
     # --- Input section ---
     total_hours = st.number_input("Enter the number of free hours you have today:", min_value=0.5, step=0.5)
@@ -126,10 +126,11 @@ def run():
                 if results:
                     st.markdown(
                     """
-                    <div style="display: flex; justify-content: center; margin-bottom: 2rem">
+                    <div style="display: flex; justify-content: center; margin-bottom: 2rem;">
                         <a href="data:file/csv;base64,{csv_data}" download="study_plan.csv">
                             <button style="
                                 color:white;
+                                background-color: black;
                                 border:none;
                                 padding:10px 20px;
                                 border-radius:8px;
