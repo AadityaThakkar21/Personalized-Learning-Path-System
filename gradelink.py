@@ -11,8 +11,6 @@ DEFAULT_COURSE_CREDITS = 3.0
 # --- Grade Tracking Data Structure Initialization ---
 def initialize_data():
     """Initializes all necessary data structures in Streamlit session state."""
-    
-# [ ... initialize_data function remains unchanged ... ]
     # 1. GPA Scale Configuration (Key: Letter Grade, Value: Min Percent)
     if 'gpa_scale' not in st.session_state:
         st.session_state.gpa_scale = pd.DataFrame({
@@ -24,7 +22,7 @@ def initialize_data():
     # 2. Main Course Data Structure
     if 'gpa_data' not in st.session_state:
         st.session_state.gpa_data = {}
-        
+
     # 3. Initialize a default course if none exist
     if not st.session_state.gpa_data:
         st.session_state.gpa_data[DEFAULT_COURSE_NAME] = {
@@ -39,7 +37,7 @@ def initialize_data():
                 'Delete?': [False, False, False, False]
             })
         }
-        
+
     # 4. State for current selection and mode
     if 'current_course' not in st.session_state:
         st.session_state.current_course = DEFAULT_COURSE_NAME
@@ -47,10 +45,14 @@ def initialize_data():
         st.session_state.manage_mode = 'details' # 'details', 'add', 'delete'
     if 'delete_mode' not in st.session_state:
         st.session_state.delete_mode = False
-        
+
     # 5. NEW: State for change detection
     if 'prev_assignments_state' not in st.session_state:
         st.session_state.prev_assignments_state = {}
+
+    # 6. Ensure rerun flag exists
+    if '_force_rerun' not in st.session_state:
+        st.session_state['_force_rerun'] = False
 
 # --- Core Calculation Functions ---
 
@@ -59,7 +61,6 @@ def calculate_course_grade(course_data: dict) -> tuple[float, float, float, floa
     Calculates the current, weighted completed grade, total weight completed, and *projected final grade*.
     Returns: (Current Grade on Completed Work, Weighted Completed Grade, Total Weight Completed, Projected Final Grade)
     """
-# [ ... calculate_course_grade function remains unchanged ... ]
     df = course_data['assignments'].copy()
     
     # Ensure weights sum to 100
@@ -91,7 +92,6 @@ def calculate_course_grade(course_data: dict) -> tuple[float, float, float, floa
 
 def calculate_overall_gpa(gpa_data: dict, gpa_scale_df: pd.DataFrame) -> float:
     """Calculates the overall GPA weighted by course credits."""
-# [ ... calculate_overall_gpa function remains unchanged ... ]
     total_credits = 0
     total_gpa_points = 0
     
@@ -129,7 +129,6 @@ def optimize_required_score(course_data: dict, target_grade: float) -> tuple[flo
     Calculates the minimum required average score on remaining assignments to hit the target.
     Returns: (required_score, remaining_weight_percent, weighted_completed_grade)
     """
-# [ ... optimize_required_score function remains unchanged ... ]
     df = course_data['assignments'].copy()
     
     # Ensure target grade is between 0 and 100
@@ -164,7 +163,6 @@ def optimize_required_score(course_data: dict, target_grade: float) -> tuple[flo
 # --- NEW: Change Detection Helper ---
 
 def assignments_to_comparable_string(df: pd.DataFrame) -> str:
-# [ ... assignments_to_comparable_string function remains unchanged ... ]
     """
     Converts the essential assignment data into a hashable string for change detection.
     Focuses on columns that drive calculations: Weight, Grade, and Completion status.
@@ -182,7 +180,6 @@ def assignments_to_comparable_string(df: pd.DataFrame) -> str:
 # --- UI Components ---
 
 def render_overall_performance():
-# [ ... render_overall_performance function remains unchanged ... ]
     """Renders the sidebar with overall GPA and course selection/management."""
     
     st.sidebar.markdown("## 📈 Overall Performance")
@@ -212,6 +209,7 @@ def render_overall_performance():
             st.session_state.current_course = course_name
             st.session_state.manage_mode = 'details' # Go to details view
             st.session_state.delete_mode = False # Exit delete mode
+            # safe to rerun here because this is main flow (not a callback)
             st.rerun() # Force rerun to load new course details
 
     st.sidebar.markdown("---")
@@ -257,6 +255,7 @@ def render_subject_details():
         # Update target if changed
         if new_target != course_data['Target Course Grade (%)']:
             st.session_state.gpa_data[course_name]['Target Course Grade (%)'] = new_target
+            # safe rerun in main flow
             st.rerun() 
             
     st.markdown("---")
@@ -320,34 +319,37 @@ def render_subject_details():
     st.markdown("---")
     
     # --- Feature 2: Assignment Tracker ---
-# [ ... rest of render_subject_details remains unchanged ... ]
     st.subheader("📝 Assignment Weights and Grades")
     
     # Toggle Delete Mode
     def toggle_delete_mode():
+        # toggle delete mode and request a safe rerun
         st.session_state.delete_mode = not st.session_state.delete_mode
         # Reset deletion marks when changing mode
         if 'Delete?' in st.session_state.gpa_data[course_name]['assignments'].columns:
             st.session_state.gpa_data[course_name]['assignments']['Delete?'] = False
-        st.rerun()
+        # set rerun flag (do NOT call st.rerun() directly here)
+        st.session_state['_force_rerun'] = True
 
     def delete_marked_rows():
         df = st.session_state.gpa_data[course_name]['assignments']
-        rows_to_delete_count = df['Delete?'].sum()
+        rows_to_delete_count = int(df['Delete?'].sum()) if 'Delete?' in df.columns else 0
         if rows_to_delete_count > 0:
             df_retained = df[df['Delete?'] == False].copy()
             df_retained['Delete?'] = False
             st.session_state.gpa_data[course_name]['assignments'] = df_retained
+            # show feedback (OK inside callback)
             st.success(f"Successfully deleted {rows_to_delete_count} assignment(s).")
+        # leave delete mode
         st.session_state.delete_mode = False
-        st.rerun()
+        # set rerun flag instead of calling st.rerun() inside callback
+        st.session_state['_force_rerun'] = True
 
     if st.session_state.delete_mode:
         st.markdown("### 🗑️ Delete Mode: Check assignments to remove, then confirm.")
     else:
         st.markdown("### Edit Assignments:")
 
-    
     # Column Configuration
     base_config = {
         'Type': st.column_config.TextColumn("Type (e.g., HW, Quiz)"),
@@ -361,17 +363,32 @@ def render_subject_details():
 
     if st.session_state.delete_mode:
         # In Delete Mode: Show all columns and disable editing on non-delete columns
-        editor_config = base_config.copy()
-        for col in base_config:
-            editor_config[col] = base_config[col].copy()
-            editor_config[col].disabled = True
-        
+        # Build a fresh editor_config so we don't mutate base_config
+        editor_config = {}
+        for col, cfg in base_config.items():
+            # attempt to copy config dict if possible; otherwise use as-is
+            try:
+                cfg_copy = cfg.copy()
+            except Exception:
+                cfg_copy = cfg
+            # set disabled flag in dict style
+            try:
+                cfg_copy['disabled'] = True
+            except Exception:
+                # If cfg_copy isn't dict-like, just assign directly (best-effort)
+                pass
+            editor_config[col] = cfg_copy
+
+        # Add Delete checkbox column (editable)
         editor_config["Delete?"] = st.column_config.CheckboxColumn("Mark to Delete", default=False)
         df_to_edit = df_assignments
         editor_key = f"assignment_editor_{course_name}_delete"
 
     else:
         # In Edit Mode: Hide the Delete? column
+        # If 'Delete?' doesn't exist for any reason, pad with False earlier
+        if 'Delete?' not in df_assignments.columns:
+            df_assignments['Delete?'] = False
         df_to_edit = df_assignments.drop(columns=['Delete?'])
         editor_config = base_config
         editor_key = f"assignment_editor_{course_name}_edit"
@@ -415,7 +432,7 @@ def render_subject_details():
         if len(new_delete_data) == len(new_df):
             new_df['Delete?'] = new_delete_data
         else:
-             # Fallback: if lengths mismatch unexpectedly
+            # Fallback: if lengths mismatch unexpectedly
             new_df['Delete?'] = [False] * len(new_df) 
             
     # 2. Update session state with the new DataFrame
@@ -434,7 +451,8 @@ def render_subject_details():
         
         # Check if the change was substantial enough to warrant a rerun 
         if not df_assignments_current.equals(new_df):
-            st.rerun()
+            # request a safe rerun (we're in main flow here)
+            st.session_state['_force_rerun'] = True
 
     # Buttons for delete mode management
     btn_col1, btn_col2, _ = st.columns([1.5, 1.5, 3])
@@ -448,8 +466,8 @@ def render_subject_details():
     if st.session_state.gpa_data[course_name]['assignments']['Weight (%)'].sum() != 100:
         st.error(f"⚠️ Warning: Total assignment weight is **{st.session_state.gpa_data[course_name]['assignments']['Weight (%)'].sum()}%**. It should ideally sum to 100%.")
 
+
 def render_add_course():
-# [ ... render_add_course function remains unchanged ... ]
     """Renders the UI for adding a new course."""
     st.header("➕ Add New Course")
     
@@ -477,10 +495,10 @@ def render_add_course():
             }
             st.session_state.current_course = new_course_name
             st.session_state.manage_mode = 'details'
+            # safe to rerun in main flow
             st.rerun()
 
 def render_manage_courses():
-# [ ... render_manage_courses function remains unchanged ... ]
     """Renders the UI for deleting existing courses."""
     st.header("🗑️ Manage Existing Subjects")
     
@@ -520,7 +538,6 @@ def render_manage_courses():
         st.rerun()
 
 def render_gpa_scale_config():
-# [ ... render_gpa_scale_config function remains unchanged ... ]
     """Renders the editable GPA scale configuration."""
     st.header("School GPA Scale Configuration")
     
@@ -542,7 +559,6 @@ def render_gpa_scale_config():
 # --- Main App Execution ---
 
 def app_main():
-# [ ... app_main function remains unchanged ... ]
     initialize_data()
 
     st.set_page_config(layout="wide")
@@ -569,6 +585,12 @@ def app_main():
             render_subject_details()
         else:
             st.info("Use the sidebar to add a new course to get started!")
+
+    # --- Safe rerun handler: perform rerun right after callbacks/main flow sets the flag ---
+    if st.session_state.get('_force_rerun', False):
+        # reset the flag and rerun once
+        st.session_state['_force_rerun'] = False
+        st.rerun()
 
 if __name__ == '__main__':
     app_main()
