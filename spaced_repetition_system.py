@@ -73,7 +73,7 @@ with st.expander("📚 User Manual & Variable Descriptions"):
 
         ### Concept Table Variables
 
-        * **Initial Lambda ($\lambda_{{old}}$):**
+        * **Forgetting Rate ($\lambda_{{old}}$):**
             * **Description:** The personalized forgetting rate for a concept *before* the latest quiz.
             * **Usage:** You estimate this when you first add a concept: **low $\lambda$ for easy concepts, high $\lambda$ for hard concepts.**
             * *The system updates this value to the "New $\lambda$" after each simulation.*
@@ -99,7 +99,7 @@ with config_col1:
     )
     # Calculate the natural log of the target retention rate
     LN_R_TARGET_ADJ = math.log(r_target)
-    st.info(f"The system aims to keep knowledge retention at **{r_target * 100:.0f}%**.")
+    st.info(f"What percentage of the content do you wish to memorize")
 
 with config_col2:
     st.markdown(r"### Decay Rate Tuning ($\beta$)")
@@ -108,7 +108,7 @@ with config_col2:
         min_value=0.05, max_value=0.50, value=BETA_DEFAULT, step=0.01,
         label_visibility="collapsed"
     )
-    st.info(r"A higher $\beta$ means the decay rate adjusts more aggressively based on the quiz score.")
+    st.info(r"A higher $\beta$ means the rate at which you forget adjusts more aggressively based on the quiz score to calculate the interval hours of revision")
 
 st.markdown("---")
 
@@ -120,7 +120,7 @@ st.header("2. Define Your Concepts")
 if 'df_srs' not in st.session_state:
     st.session_state.df_srs = pd.DataFrame({
         'Concept': ['T-tests (Hard)', 'Linear Algebra Basics (Easy)'],
-        'Initial Lambda': [0.15, 0.05],
+        'Initial Lambda': [0.15, 0.05], # FIXED: Must use 'Initial Lambda' as the internal key
         'New Quiz Score (0-1)': [0.70, 0.98],
         'Delete?': [False, False] # Added the new boolean column for deletion
     })
@@ -182,7 +182,7 @@ else:
 base_config = {
     "Concept": st.column_config.TextColumn("Concept Name", required=True),
     "Initial Lambda": st.column_config.NumberColumn(
-        r"Initial Lambda ($\lambda_{old}$)", 
+        r"Initial Forgetting Rate", 
         help="Higher value means faster initial forgetting (e.g., 0.05 for easy, 0.15 for hard).",
         min_value=0.001,
         step=0.01
@@ -213,7 +213,7 @@ if st.session_state.delete_mode:
     # Disable editing on the core columns
     # We must explicitly redefine the columns to set 'disabled=True'
     editor_config["Concept"] = st.column_config.TextColumn("Concept Name", required=True, disabled=True)
-    editor_config["Initial Lambda"] = st.column_config.NumberColumn(r"Initial Lambda ($\lambda_{old}$)", disabled=True)
+    editor_config["Initial Lambda"] = st.column_config.NumberColumn(r"Initial Forgetting Rate", disabled=True)
     editor_config["New Quiz Score (0-1)"] = st.column_config.NumberColumn("New Quiz Score", disabled=True)
     
     editor_key = "data_editor_delete_mode"
@@ -323,7 +323,7 @@ if not current_df_for_calc.empty:
             if row['Delete?'] == True:
                 continue
                 
-            old_lambda = float(row['Initial Lambda'])
+            old_lambda = float(row['Initial Lambda']) # FIXED: Access the data using the correct internal column name 'Initial Lambda'
             new_score = float(row['New Quiz Score (0-1)'])
         except (ValueError, TypeError):
             # Skip rows where input is invalid (e.g., empty string in a number field)
@@ -355,11 +355,11 @@ if not current_df_for_calc.empty:
         
         results.append({
             'Concept': concept,
-            r'Initial Decay Rate': f"{old_lambda:.4f}",
+            r'Initial Forgetting Rate': f"{old_lambda:.4f}",
             # Apply format_interval_to_hours for output display
             'Initial Interval (Hours)': format_interval_to_hours(initial_interval_days),
             'New Score': f"{new_score:.2f}",
-            r'New Decay Rate': f"{new_lambda:.4f}",
+            r'New Forgetting Rate': f"{new_lambda:.4f}",
             # Apply format_interval_to_hours for output display
             'New Optimal Interval (Hours)': format_interval_to_hours(new_interval_days),
             'Interval Change': interval_change
