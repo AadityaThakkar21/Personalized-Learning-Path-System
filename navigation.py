@@ -8,6 +8,7 @@ Leaderboard = st.Page("leaderboard.py", title="Leaderboard", icon="🏆")
 StudyGroup = st.Page("study_group.py", title="Study Group", icon="👥")
 KnowledgeGap = st.Page("knowledge_gap_detector.py", title="Knowledge Gap Detector", icon="🧩")
 SpacedRepetition = st.Page("spaced_repetition_system.py", title="Spaced Repetition", icon="🧠")
+GradeLink = st.Page("gradelink.py", title="Grade Link", icon="💯")
 
 # Set up navigation with all pages
 pg = st.navigation([
@@ -17,7 +18,8 @@ pg = st.navigation([
     Leaderboard,
     StudyGroup,
     KnowledgeGap,
-    SpacedRepetition
+    SpacedRepetition,
+    GradeLink
 ])
 
 # Run the selected page
