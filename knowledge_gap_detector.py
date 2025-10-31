@@ -1,162 +1,133 @@
 import streamlit as st
 import pandas as pd
-from sklearn.linear_model import LinearRegression
-from datetime import datetime
 import numpy as np
-import os
+from datetime import datetime
 
-RESULTS_CSV = "quiz_results.csv"
-
-def predict_future_score(df_user, subject):
-    """Predict next score using linear regression on past attempts."""
-    df_sub = df_user[df_user["subject"] == subject].copy()
-    df_sub = df_sub.sort_values("timestamp").reset_index(drop=True)
-
-    if len(df_sub) < 2:
-        return 0, None  # not enough data for regression
-
-    X = np.arange(len(df_sub)).reshape(-1, 1)
-    y = df_sub["score"].astype(float).values
-    model = LinearRegression()
-    model.fit(X, y)
-
-    next_index = np.array([[len(df_sub)]])
-    predicted = model.predict(next_index)[0]
-    trend = model.coef_[0]  # slope of the line
-
-    return predicted, trend
-
-
-def calculate_weekly_progress(df_user):
-    """Compare average scores in recent vs. past quizzes (based on timestamps)."""
-    if "timestamp" not in df_user.columns or df_user.empty:
-        return None, None
-
-    df_user["timestamp"] = pd.to_datetime(df_user["timestamp"], errors="coerce")
-    df_user = df_user.dropna(subset=["timestamp"])
-
-    if df_user.empty:
-        return None, None
-
-    # Split data: recent (last 7 days) vs past
-    latest_date = df_user["timestamp"].max()
-    cutoff = latest_date - pd.Timedelta(days=7)
-
-    recent = df_user[df_user["timestamp"] >= cutoff]
-    past = df_user[df_user["timestamp"] < cutoff]
-
-    if recent.empty or past.empty:
-        return None, None
-
-    avg_recent = recent["score"].mean()
-    avg_past = past["score"].mean()
-    diff = avg_recent - avg_past
-    return diff, (avg_recent, avg_past)
-
+# =====================================================
+# Knowledge Gap Detector (Enhanced with Difficulty Weighting)
+# =====================================================
 
 def run():
-    st.set_page_config(page_title="Knowledge Gap Detector", layout="centered")
-    st.title("🧩 Knowledge Gap Detector")
-    st.write("Analyze your quiz performance and get personalized recommendations to improve!")
+    st.set_page_config(page_title="Knowledge Gap Detector", layout="wide")
+    st.title("🧩 Knowledge Gap & Performance Predictor")
 
-    if not os.path.exists(RESULTS_CSV):
-        st.warning(f"⚠️ No quiz results found yet! Please take some quizzes first.")
+    st.write("Analyze your quiz results, identify weak areas, and predict your future performance.")
+
+    # Load results file
+    try:
+        df = pd.read_csv("quiz_results.csv")
+    except FileNotFoundError:
+        st.error("⚠ No quiz_results.csv found. Please take some quizzes first.")
         return
 
-    df = pd.read_csv(RESULTS_CSV)
-    if df.empty:
-        st.warning("⚠️ Your results file is empty.")
+    # Check required columns
+    required_cols = ["timestamp", "user_id", "subject", "difficulty", "score", "total"]
+    if not all(col in df.columns for col in required_cols):
+        st.error("CSV file missing required columns.")
         return
 
-    # Ensure necessary columns exist
-    required_cols = {"timestamp", "user_id", "subject", "score", "total"}
-    if not required_cols.issubset(df.columns):
-        st.error(f"Results CSV is missing columns: {required_cols - set(df.columns)}")
-        return
-
-    user_id = st.text_input("Enter your User ID:")
+    user_id = st.text_input("Enter your User ID (e.g., 101):")
     if not user_id:
-        st.info("Please enter your User ID to view personalized analysis.")
+        st.info("Please enter your User ID to see your analysis.")
         return
 
-    df_user = df[df["user_id"].astype(str) == str(user_id)]
-    if df_user.empty:
-        st.warning("No data found for this user yet.")
+    try:
+        user_id = int(user_id)
+    except ValueError:
+        st.error("User ID must be numeric.")
         return
 
-    # --- Assign attempt numbers for each subject ---
-    df_user = df_user.sort_values("timestamp").copy()
-    df_user["attempt_no"] = df_user.groupby("subject").cumcount() + 1
+    user_df = df[df["user_id"] == user_id]
 
-    st.subheader(f"📚 Summary for User {user_id}")
+    if user_df.empty:
+        st.warning("No records found for this user.")
+        return
 
-    # 🟢 Motivation Tracker — based on weekly progress
-    diff, averages = calculate_weekly_progress(df_user)
-    if diff is not None:
-        avg_recent, avg_past = averages
-        if diff > 0:
-            st.success(f"👏 Great job! Your average score improved by +{diff:.1f} since last week! "
-                       f"(Now {avg_recent:.1f} vs {avg_past:.1f})")
-        elif diff < 0:
-            st.warning(f"😌 Slight dip detected — your average score dropped by {abs(diff):.1f} since last week. "
-                       f"Try revising weaker topics to recover.")
+    st.write(f"### 📊 Performance Summary for User {user_id}")
+
+    # Difficulty weighting
+    difficulty_weights = {"Easy": 0.8, "Intermediate": 1.0, "Hard": 1.2}
+
+    all_predictions = []
+    score_trends = []
+
+    for subject in user_df["subject"].unique():
+        sub_df = user_df[user_df["subject"] == subject].sort_values(by="timestamp")
+        if len(sub_df) < 1:
+            continue
+
+        # Apply difficulty-based weighting
+        sub_df["weighted_score"] = sub_df.apply(
+            lambda row: row["score"] * difficulty_weights.get(row["difficulty"], 1.0),
+            axis=1
+        )
+
+        scores = sub_df["weighted_score"].tolist()
+        raw_scores = sub_df["score"].tolist()
+
+        # Weighted time-average prediction
+        weights = np.linspace(1, 2, len(scores))
+        weighted_avg = np.average(scores, weights=weights)
+
+        # Linear trend (time slope)
+        x = np.arange(len(scores))
+        if len(scores) > 1:
+            slope = np.polyfit(x, scores, 1)[0]
         else:
-            st.info(f"📈 Your performance is stable this week. Keep up your consistency!")
-    else:
-        st.info("📊 Not enough data yet for weekly trend analysis — complete more quizzes to track progress!")
+            slope = 0
 
-    # --- Analyze each subject ---
-    subjects = df_user["subject"].unique()
+        predicted_score = max(0, min(5, round(weighted_avg + slope, 0)))
 
-    for subject in subjects:
-        df_sub = df_user[df_user["subject"] == subject].sort_values("attempt_no")
-        current_score = int(df_sub["score"].iloc[-1])
-        predicted_score, trend = predict_future_score(df_user, subject)
-        predicted_score = max(0, int(round(predicted_score)))  # avoid negatives & decimals
-
-        # --- Get recent score history (last 3 attempts) ---
-        recent_scores = df_sub["score"].tolist()[-3:]
-        score_history = " → ".join(str(int(s)) for s in recent_scores)
-
-        # --- Explain based on recent pattern ---
-        if len(recent_scores) < 2:
-            trend_explanation = "Not enough attempts yet to analyze your learning pattern."
-        elif all(s == recent_scores[0] for s in recent_scores):
-            trend_explanation = f"Your scores ({score_history}) are consistent — great stability!"
-        elif recent_scores[-1] > recent_scores[0]:
-            trend_explanation = f"Your scores ({score_history}) show steady improvement — keep it up!"
-        elif recent_scores[-1] < recent_scores[0]:
-            trend_explanation = f"Your scores ({score_history}) show a small drop — revise weak areas to recover."
+        # Determine trend text
+        if slope > 0.1:
+            trend = "Improving"
+            reason = "Your recent scores show steady improvement — great job!"
+        elif slope < -0.1:
+            trend = "Declining"
+            reason = "Your performance dipped slightly; revise weak topics and review harder questions."
         else:
-            trend_explanation = f"Your scores ({score_history}) vary slightly — maintain steady effort."
+            trend = "Stable"
+            reason = "Your performance is consistent; keep practicing to maintain it."
 
-        # --- Add context for predicted trend ---
-        if trend is None:
-            trend_label = "Stable"
-        elif trend > 0:
-            trend_label = "Improving"
-        elif trend < 0:
-            trend_label = "Declining"
-        else:
-            trend_label = "Stable"
+        # Adjust reasoning with difficulty insight
+        if sub_df["difficulty"].iloc[-1] == "Hard" and slope >= 0:
+            reason += " You’re handling harder questions effectively, which shows real progress."
+        elif sub_df["difficulty"].iloc[-1] == "Easy" and slope < 0:
+            reason += " Since the difficulty was easier, aim for higher accuracy next time."
 
-        # --- Recommendation logic ---
-        if predicted_score >= 4:
-            recommendation = "You’re performing strongly — challenge yourself with harder quizzes!"
-        elif predicted_score >= 2:
-            recommendation = "You’re doing okay — focus on practice quizzes to strengthen core topics."
-        else:
-            recommendation = "Performance is low — revise key concepts to rebuild confidence."
+        # Percentile estimation across subjects
+        all_predictions.append(predicted_score)
+        score_trends.append((subject, raw_scores, predicted_score, trend, reason))
 
-        # --- Display for the user ---
+    if not score_trends:
+        st.warning("Not enough data to analyze.")
+        return
+
+    overall_pred = np.mean(all_predictions)
+    percentile = round((overall_pred / 5) * 100, 1)
+    if percentile > 100: percentile = 100
+    if percentile < 0: percentile = 0
+
+    # ---- Display Results ----
+    st.markdown("### 🧠 Subject-Wise Analysis")
+    for subject, raw_scores, predicted_score, trend, reason in score_trends:
+        score_path = " → ".join(map(str, raw_scores))
         st.markdown(f"""
-        ### 🧠 {subject}
-        **Current Score:** {current_score}/5  
-        **Predicted Next Score:** {predicted_score}/5  
-        **Trend:** {trend_label}  
-        **Why:** {trend_explanation}  
-        **Recommendation:** {recommendation}
+        **📘 {subject}**
+        - Past Scores: {score_path}
+        - Predicted Next Score: **{int(predicted_score)}/5**
+        - Trend: **{trend}**
+        - Why: {reason}
         """)
+
+    st.markdown("---")
+    st.markdown(f"### 🎯 Overall Predicted Percentile: **{percentile}%**")
+    if percentile >= 85:
+        st.success("Excellent performance! Keep maintaining this level of consistency.")
+    elif percentile >= 60:
+        st.info("Good performance! Keep working on your weaker areas to reach the top percentile.")
+    else:
+        st.warning("You can do better. Focus on your weak subjects and practice more challenging questions.")
 
 
 if __name__ == "__main__":
