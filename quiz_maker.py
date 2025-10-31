@@ -77,7 +77,7 @@ def log_result(user_id: str, subject: str, difficulty: str, score: int, total: i
 
 def run():
     st.set_page_config(page_title="Personalized Learning Quiz", layout="centered")
-    st.title("Personalized Learning Quiz")
+    st.title("📝 Personalized Learning Quiz")
     st.write("Take quizzes by selecting a subject and difficulty level!")
 
     # --- Load quiz data ---
