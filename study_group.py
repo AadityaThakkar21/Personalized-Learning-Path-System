@@ -7,7 +7,7 @@ from sklearn.metrics import silhouette_score
 import string
 
 def run():
-    st.title("🎯 Student Performance Clustering Dashboard")
+    st.title("👥 Student Performance Clustering Dashboard")
 
     with st.spinner("⏳ Loading... please wait while we process and compute everything."):
         # 1. loading data
