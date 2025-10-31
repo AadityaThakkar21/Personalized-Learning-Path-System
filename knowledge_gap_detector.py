@@ -1,187 +1,163 @@
-import pandas as pd
 import streamlit as st
-import os
-from sklearn.cluster import KMeans
-from sklearn.tree import DecisionTreeClassifier
+import pandas as pd
+from sklearn.linear_model import LinearRegression
+from datetime import datetime
 import numpy as np
-import seaborn as sns
-import matplotlib.pyplot as plt
+import os
 
-# --------------------------------------------------
-# Streamlit Setup
-# --------------------------------------------------
-st.set_page_config(page_title="Personalized Learning Insights", page_icon="🎓", layout="centered")
+RESULTS_CSV = "quiz_results.csv"
 
-st.title("🎓 Personalized Learning Insights")
-st.write("""
-Welcome! This tool reviews your quiz results and gives you clear guidance on how you're doing across subjects.  
-It also helps you see where to focus next — using smart pattern recognition in the background.
-""")
+def predict_future_score(df_user, subject):
+    """Predict next score using linear regression on past attempts."""
+    df_sub = df_user[df_user["subject"] == subject].copy()
+    df_sub = df_sub.sort_values("timestamp").reset_index(drop=True)
 
-# --------------------------------------------------
-# Load Quiz Results
-# --------------------------------------------------
-csv_path = "quiz_results.csv"
+    if len(df_sub) < 2:
+        return 0, None  # not enough data for regression
 
-if not os.path.exists(csv_path):
-    st.error(f"❌ File not found: {csv_path}")
-    st.stop()
+    X = np.arange(len(df_sub)).reshape(-1, 1)
+    y = df_sub["score"].astype(float).values
+    model = LinearRegression()
+    model.fit(X, y)
 
-df = pd.read_csv(csv_path)
-df.columns = [c.strip().lower() for c in df.columns]
+    next_index = np.array([[len(df_sub)]])
+    predicted = model.predict(next_index)[0]
+    trend = model.coef_[0]  # slope of the line
 
-required_cols = {"user_id", "subject", "difficulty", "score", "total"}
-if not required_cols.issubset(set(df.columns)):
-    st.error(f"⚠ Missing required columns. Expected: {required_cols}")
-    st.stop()
+    return predicted, trend
 
-df["accuracy"] = df["score"] / df["total"]
 
-# --------------------------------------------------
-# User Input
-# --------------------------------------------------
-st.subheader("👤 Enter Your User ID")
-user_id_input = st.text_input("Enter your User ID (e.g., 101, 102, 103):").strip()
+def calculate_weekly_progress(df_user):
+    """Compare average scores in recent vs. past quizzes (based on timestamps)."""
+    if "timestamp" not in df_user.columns or df_user.empty:
+        return None, None
 
-if not user_id_input:
-    st.info("Please enter your User ID to see your learning insights.")
-    st.stop()
+    df_user["timestamp"] = pd.to_datetime(df_user["timestamp"], errors="coerce")
+    df_user = df_user.dropna(subset=["timestamp"])
 
-try:
-    if df["user_id"].dtype != object:
-        user_data = df[df["user_id"] == int(user_id_input)]
+    if df_user.empty:
+        return None, None
+
+    # Split data: recent (last 7 days) vs past
+    latest_date = df_user["timestamp"].max()
+    cutoff = latest_date - pd.Timedelta(days=7)
+
+    recent = df_user[df_user["timestamp"] >= cutoff]
+    past = df_user[df_user["timestamp"] < cutoff]
+
+    if recent.empty or past.empty:
+        return None, None
+
+    avg_recent = recent["score"].mean()
+    avg_past = past["score"].mean()
+    diff = avg_recent - avg_past
+    return diff, (avg_recent, avg_past)
+
+
+def run():
+    st.set_page_config(page_title="Knowledge Gap Detector", layout="centered")
+    st.title("🧩 Knowledge Gap Detector")
+    st.write("Analyze your quiz performance and get personalized recommendations to improve!")
+
+    if not os.path.exists(RESULTS_CSV):
+        st.warning(f"⚠️ No quiz results found yet! Please take some quizzes first.")
+        return
+
+    df = pd.read_csv(RESULTS_CSV)
+    if df.empty:
+        st.warning("⚠️ Your results file is empty.")
+        return
+
+    # Ensure necessary columns exist
+    required_cols = {"timestamp", "user_id", "subject", "score", "total"}
+    if not required_cols.issubset(df.columns):
+        st.error(f"Results CSV is missing columns: {required_cols - set(df.columns)}")
+        return
+
+    user_id = st.text_input("Enter your User ID:")
+    if not user_id:
+        st.info("Please enter your User ID to view personalized analysis.")
+        return
+
+    df_user = df[df["user_id"].astype(str) == str(user_id)]
+    if df_user.empty:
+        st.warning("No data found for this user yet.")
+        return
+
+    # --- Assign attempt numbers for each subject ---
+    df_user = df_user.sort_values("timestamp").copy()
+    df_user["attempt_no"] = df_user.groupby("subject").cumcount() + 1
+
+    st.subheader(f"📚 Summary for User {user_id}")
+
+    # 🟢 Motivation Tracker — based on weekly progress
+    diff, averages = calculate_weekly_progress(df_user)
+    if diff is not None:
+        avg_recent, avg_past = averages
+        if diff > 0:
+            st.success(f"👏 Great job! Your average score improved by +{diff:.1f} since last week! "
+                       f"(Now {avg_recent:.1f} vs {avg_past:.1f})")
+        elif diff < 0:
+            st.warning(f"😌 Slight dip detected — your average score dropped by {abs(diff):.1f} since last week. "
+                       f"Try revising weaker topics to recover.")
+        else:
+            st.info(f"📈 Your performance is stable this week. Keep up your consistency!")
     else:
-        user_data = df[df["user_id"].astype(str) == user_id_input]
-except ValueError:
-    st.error("⚠ Invalid input! Please enter a valid User ID number.")
-    st.stop()
+        st.info("📊 Not enough data yet for weekly trend analysis — complete more quizzes to track progress!")
 
-if user_data.empty:
-    st.warning("No quiz data found for this User ID.")
-    st.stop()
+    # --- Analyze each subject ---
+    subjects = df_user["subject"].unique()
 
-# --------------------------------------------------
-# Subject Accuracy Summary
-# --------------------------------------------------
-subject_summary = (
-    user_data.groupby("subject")["accuracy"]
-    .mean()
-    .reset_index()
-    .sort_values(by="accuracy", ascending=False)
-)
+    for subject in subjects:
+        df_sub = df_user[df_user["subject"] == subject].sort_values("attempt_no")
+        current_score = int(df_sub["score"].iloc[-1])
+        predicted_score, trend = predict_future_score(df_user, subject)
+        predicted_score = max(0, int(round(predicted_score)))  # avoid negatives & decimals
 
-st.subheader("📘 Your Subject Performance")
-st.dataframe(subject_summary.style.format({"accuracy": "{:.2%}"}), use_container_width=True)
+        # --- Get recent score history (last 3 attempts) ---
+        recent_scores = df_sub["score"].tolist()[-3:]
+        score_history = " → ".join(str(int(s)) for s in recent_scores)
 
-# --------------------------------------------------
-# Personalized Recommendations (simple rule-based)
-# --------------------------------------------------
-def get_recommendation(acc):
-    if acc >= 0.9:
-        return "🌟 Excellent! Keep maintaining your high performance."
-    elif acc >= 0.75:
-        return "👍 Good work! A little more practice can make you perfect."
-    elif acc >= 0.5:
-        return "🟡 You can do better — revise your notes and take more practice quizzes."
-    else:
-        return "🔴 Needs improvement — focus on basics and regular revision."
+        # --- Explain based on recent pattern ---
+        if len(recent_scores) < 2:
+            trend_explanation = "Not enough attempts yet to analyze your learning pattern."
+        elif all(s == recent_scores[0] for s in recent_scores):
+            trend_explanation = f"Your scores ({score_history}) are consistent — great stability!"
+        elif recent_scores[-1] > recent_scores[0]:
+            trend_explanation = f"Your scores ({score_history}) show steady improvement — keep it up!"
+        elif recent_scores[-1] < recent_scores[0]:
+            trend_explanation = f"Your scores ({score_history}) show a small drop — revise weak areas to recover."
+        else:
+            trend_explanation = f"Your scores ({score_history}) vary slightly — maintain steady effort."
 
-subject_summary["Recommendation"] = subject_summary["accuracy"].apply(get_recommendation)
+        # --- Add context for predicted trend ---
+        if trend is None:
+            trend_label = "Stable"
+        elif trend > 0:
+            trend_label = "Improving"
+        elif trend < 0:
+            trend_label = "Declining"
+        else:
+            trend_label = "Stable"
 
-st.subheader("💡 Personalized Recommendations")
-st.dataframe(subject_summary.style.format({"accuracy": "{:.2%}"}), use_container_width=True)
+        # --- Recommendation logic ---
+        if predicted_score >= 4:
+            recommendation = "You’re performing strongly — challenge yourself with harder quizzes!"
+        elif predicted_score >= 2:
+            recommendation = "You’re doing okay — focus on practice quizzes to strengthen core topics."
+        else:
+            recommendation = "Performance is low — revise key concepts to rebuild confidence."
 
-# --------------------------------------------------
-# Study Focus Analysis (K-Means Clustering)
-# --------------------------------------------------
-st.divider()
-st.subheader("🎯 Your Study Focus Levels")
-st.write("""
-We’ve analyzed your results and grouped your subjects into **focus levels**.  
-These levels show which subjects you’re strong in and which ones may need more attention.
-""")
+        # --- Display for the user ---
+        st.markdown(f"""
+        ### 🧠 {subject}
+        **Current Score:** {current_score}/5  
+        **Predicted Next Score:** {predicted_score}/5  
+        **Trend:** {trend_label}  
+        **Why:** {trend_explanation}  
+        **Recommendation:** {recommendation}
+        """)
 
-# Run K-Means
-X = subject_summary[["accuracy"]].values
-kmeans = KMeans(n_clusters=3, random_state=42, n_init=10)
-subject_summary["cluster"] = kmeans.fit_predict(X)
 
-# Sort clusters by mean accuracy and relabel
-cluster_means = subject_summary.groupby("cluster")["accuracy"].mean().sort_values().index
-labels = {cluster_means[0]: "Focus First", cluster_means[1]: "Needs Attention", cluster_means[2]: "Strong Area"}
-subject_summary["Focus_Level"] = subject_summary["cluster"].map(labels)
-
-st.dataframe(
-    subject_summary[["subject", "accuracy", "Focus_Level", "Recommendation"]]
-    .style.format({"accuracy": "{:.2%}"}),
-    use_container_width=True
-)
-
-# Add color-coded interpretation
-st.markdown("""
-### 🧠 What This Means for You:
-- **Strong Area** → You're confident here! Keep practicing to stay sharp.  
-- **Needs Attention** → You're doing fine but could use some extra review.  
-- **Focus First** → Spend more time here — this will help you improve fastest.
-""")
-
-# Optional visual chart
-fig, ax = plt.subplots(figsize=(6, 4))
-sns.barplot(data=subject_summary, x="subject", y="accuracy", hue="Focus_Level", palette="coolwarm", ax=ax)
-ax.set_title("Your Study Focus Overview")
-st.pyplot(fig)
-
-# --------------------------------------------------
-# Predict Future Strength (Decision Tree)
-# --------------------------------------------------
-st.divider()
-st.subheader("🔮 Predicted Future Performance")
-st.write("""
-We’ve reviewed how you and other students performed to **predict your likely strong and weak areas**  
-in upcoming quizzes. Think of this as your “next-step learning forecast.”
-""")
-
-df["label"] = (df["accuracy"] >= 0.75).astype(int)
-X = pd.get_dummies(df[["subject", "difficulty"]], drop_first=True)
-y = df["label"]
-
-model = DecisionTreeClassifier(max_depth=3, random_state=42)
-model.fit(X, y)
-
-user_features = pd.get_dummies(user_data[["subject", "difficulty"]], drop_first=True)
-user_features = user_features.reindex(columns=X.columns, fill_value=0)
-preds = model.predict(user_features)
-user_data["Predicted_Strength"] = ["Strong" if p == 1 else "Needs Improvement" for p in preds]
-
-st.dataframe(user_data[["subject", "difficulty", "score", "total", "Predicted_Strength"]])
-
-st.markdown("""
-### 📋 Tip:
-Subjects predicted as **"Needs Improvement"** are the best places to invest your next few study hours.  
-These are areas where small effort can lead to big progress!
-""")
-
-# --------------------------------------------------
-# Export Option
-# --------------------------------------------------
-st.divider()
-save_csv = st.checkbox("📂 Save this personalized report")
-if save_csv:
-    report_name = f"learning_report_{user_id_input}.csv"
-    subject_summary.to_csv(report_name, index=False)
-    st.success(f"✅ Report saved as {report_name}")
-
-# --------------------------------------------------
-# Summary Section (friendly version)
-# --------------------------------------------------
-st.divider()
-st.markdown("""
-## 🌟 Summary of Your Learning Insights
-
-- You now know **which subjects are your strongest**, and where to **focus more time**.  
-- Your **Study Focus Levels** were determined based on how you perform across all topics.  
-- A simple **forecast** also predicts which areas may need more practice in future.  
-
-Keep challenging yourself with new quizzes and review the “Focus First” subjects often —  
-that’s how real improvement happens! 💪
-""")
+if __name__ == "__main__":
+    run()
