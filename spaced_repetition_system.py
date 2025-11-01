@@ -11,7 +11,7 @@ import os
 st.set_page_config(page_title="Smart Revision Scheduler", page_icon="📚", layout="wide")
 
 # Title and description
-st.title("📚 Smart Quiz Revision Scheduler")
+st.title("🧠 Smart Quiz Revision Scheduler")
 st.markdown("""
 Get personalized revision intervals based on your performance!
 This ML-powered tool analyzes your study patterns to optimize your quiz preparation.

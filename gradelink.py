@@ -457,11 +457,11 @@ def render_add_course():
                 st.session_state.current_course = list(st.session_state.gpa_data.keys())[0]
 
 def main():
-    st.set_page_config(page_title="GradeLink Pro", layout="wide", page_icon="📚")
+    st.set_page_config(page_title="Grade Tracking System", layout="wide", page_icon="📚")
     
     initialize_data()
     
-    st.title("📚 GradeLink Pro - AI Grade Tracker")
+    st.title("💯 Grade Tracking System - AI Grade Tracker")
     st.markdown("*AI-powered insights to help you achieve your academic goals*")
     
     render_sidebar()
