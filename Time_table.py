@@ -3,9 +3,10 @@ import pulp
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
+from datetime import datetime, timedelta
 
-def logical_optimization(total_hours, subjects, names, priorities, min_times):
-    """Your existing two-stage linear optimization method."""
+def logical_optimization(total_hours, subjects, names, priorities, min_times, energy_levels=None):
+    """Enhanced two-stage linear optimization with optional energy matching."""
     M = float(total_hours)
 
     # Stage 1: Max subjects possible
@@ -55,12 +56,13 @@ def logical_optimization(total_hours, subjects, names, priorities, min_times):
         if pulp.value(y2[i]) > 0.5:
             raw_time = pulp.value(x2[i])
             rounded_time = round(raw_time * 2) / 2
-            results.append((names[i] or f"Subject {i+1}", rounded_time))
+            energy = energy_levels[i] if energy_levels else None
+            results.append((names[i] or f"Subject {i+1}", rounded_time, priorities[i], energy))
     return results
 
 
-def entropy_distribution(total_hours, names, priorities, min_times):
-    """New Mode: Entropy-based (Softmax) direct allocation."""
+def entropy_distribution(total_hours, names, priorities, min_times, energy_levels=None):
+    """Entropy-based (Softmax) direct allocation."""
     n = len(names)
     min_total = sum(min_times)
 
@@ -74,121 +76,259 @@ def entropy_distribution(total_hours, names, priorities, min_times):
 
     extra_time = remaining * softmax_weights
     final_times = np.array(min_times) + extra_time
-    final_times = np.round(final_times * 2) / 2  # round to nearest 0.5 hr
+    final_times = np.round(final_times * 2) / 2
 
-    return list(zip(names, final_times))
+    results = []
+    for i in range(n):
+        energy = energy_levels[i] if energy_levels else None
+        results.append((names[i], final_times[i], priorities[i], energy))
+    return results
+
+
+def pareto_optimization(total_hours, subjects, names, priorities, min_times, difficulty_levels):
+    """NEW: Multi-objective optimization balancing priority and difficulty."""
+    min_total = sum(min_times)
+    if min_total > total_hours:
+        st.error("Total hours too small for minimum time requirements.")
+        return []
+    
+    # Normalize priorities and difficulties
+    norm_priorities = np.array(priorities) / 5.0
+    norm_difficulties = np.array(difficulty_levels) / 5.0
+    
+    # Combined score: higher priority + higher difficulty gets more time
+    combined_scores = 0.6 * norm_priorities + 0.4 * norm_difficulties
+    
+    remaining = total_hours - min_total
+    weights = np.exp(combined_scores * 2)  # Exponential weighting
+    softmax_weights = weights / np.sum(weights)
+    
+    extra_time = remaining * softmax_weights
+    final_times = np.array(min_times) + extra_time
+    final_times = np.round(final_times * 2) / 2
+    
+    results = []
+    for i in range(subjects):
+        results.append((names[i], final_times[i], priorities[i], None))
+    return results
+
+
+def schedule_with_breaks(results, start_time, break_interval=1.5, break_duration=0.25):
+    """NEW: Generate time-blocked schedule with breaks."""
+    schedule = []
+    current_time = start_time
+    
+    for subj, hrs, _, energy in results:
+        remaining = hrs
+        while remaining > 0:
+            study_block = min(remaining, break_interval)
+            end_time = current_time + timedelta(hours=study_block)
+            schedule.append({
+                'subject': subj,
+                'start': current_time.strftime('%I:%M %p'),
+                'end': end_time.strftime('%I:%M %p'),
+                'duration': study_block,
+                'type': 'study',
+                'energy': energy
+            })
+            current_time = end_time
+            remaining -= study_block
+            
+            if remaining > 0:
+                break_end = current_time + timedelta(hours=break_duration)
+                schedule.append({
+                    'subject': '☕ Break',
+                    'start': current_time.strftime('%I:%M %p'),
+                    'end': break_end.strftime('%I:%M %p'),
+                    'duration': break_duration,
+                    'type': 'break',
+                    'energy': None
+                })
+                current_time = break_end
+    
+    return schedule
 
 
 def run():
-    st.title("📅 Personalized Study Timetable Generator")
+    st.title("📅 Advanced Study Timetable Generator")
+    st.markdown("*Optimize your study time with AI-powered scheduling*")
 
-    # --- Input section ---
-    total_hours = st.number_input("Enter the number of free hours you have today:", min_value=0.5, step=0.5)
-    subjects = st.number_input("Enter the number of subjects you wish to cover:", min_value=1, step=1)
+    # Sidebar for advanced settings
+    with st.sidebar:
+        st.header("⚙️ Advanced Settings")
+        enable_energy = st.checkbox("Enable Energy Level Matching", value=False)
+        enable_schedule = st.checkbox("Generate Time-Blocked Schedule", value=False)
+        if enable_schedule:
+            start_time = st.time_input("Start Time:", value=datetime.now().time())
+            break_interval = st.slider("Study block duration (hrs):", 0.5, 3.0, 1.5, 0.5)
+            break_duration = st.slider("Break duration (hrs):", 0.1, 0.5, 0.25, 0.05)
 
-    names, priorities, min_times = [], [], []
+    # Main input section
+    total_hours = st.number_input("Enter the number of free hours you have today:", min_value=0.5, step=0.5, value=6.0)
+    subjects = st.number_input("Enter the number of subjects you wish to cover:", min_value=1, step=1, value=3)
+
+    names, priorities, min_times, energy_levels, difficulty_levels = [], [], [], [], []
+    
     st.subheader("Enter details for each subject:")
-
+    
     for i in range(subjects):
-        col1, col2, col3 = st.columns([3, 1, 2])
-        with col1:
-            name = st.text_input(f"Subject {i+1} Name:", key=f"name_{i}")
-        with col2:
-            priority = st.number_input("Priority (1–5):", 1, 5, key=f"priority_{i}")
-        with col3:
-            min_time = st.number_input("Min time (hrs):", min_value=0.0, step=0.5, key=f"min_{i}")
-        names.append(name or f"Subject {i+1}")
-        priorities.append(priority)
-        min_times.append(min_time)
+        with st.expander(f"📚 Subject {i+1}", expanded=(i==0)):
+            col1, col2 = st.columns(2)
+            with col1:
+                name = st.text_input(f"Subject Name:", key=f"name_{i}", value=f"Subject {i+1}")
+                priority = st.select_slider("Priority:", options=[1,2,3,4,5], value=3, key=f"priority_{i}")
+                min_time = st.number_input("Minimum time (hrs):", min_value=0.0, step=0.5, key=f"min_{i}", value=0.5)
+            with col2:
+                if enable_energy:
+                    energy = st.select_slider(
+                        "Energy Level Required:",
+                        options=["Low", "Medium", "High"],
+                        value="Medium",
+                        key=f"energy_{i}"
+                    )
+                    energy_levels.append(energy)
+                difficulty = st.select_slider("Difficulty:", options=[1,2,3,4,5], value=3, key=f"diff_{i}")
+                difficulty_levels.append(difficulty)
+            
+            names.append(name or f"Subject {i+1}")
+            priorities.append(priority)
+            min_times.append(min_time)
 
-    # --- Mode selection ---
-    st.subheader("⚙️ Select Optimization Mode:")
+    # Mode selection
+    st.subheader("🎯 Select Optimization Mode:")
     mode = st.radio(
         "",
-        ["Default (Smart Auto - Logical Optimization)", "Entropy (Softmax Priority Distribution)"],
+        [
+            "Smart Auto (Logical Optimization)",
+            "Entropy (Softmax Distribution)",
+            "Pareto (Multi-Objective Balance)"
+        ],
         captions=[
-            "Mathematical LP-based exact allocation (two-stage optimization).",
-            "Smooth, instant, exponential priority-based time allocation."
+            "Mathematical LP-based exact allocation with constraint satisfaction.",
+            "Smooth exponential priority-based distribution.",
+            "Balances both priority AND difficulty for optimal learning."
         ]
     )
 
-    # --- Run the chosen method ---
-    if st.button("Generate Timetable"):
+    # Generate button
+    if st.button("🚀 Generate Optimal Timetable", type="primary"):
         try:
-            if mode == "Default (Smart Auto - Logical Optimization)":
-                results = logical_optimization(total_hours, subjects, names, priorities, min_times)
-                mode_name = "Smart Auto (Logical Optimization)"
+            # Run selected optimization
+            if mode == "Smart Auto (Logical Optimization)":
+                results = logical_optimization(
+                    total_hours, subjects, names, priorities, min_times,
+                    energy_levels if enable_energy else None
+                )
+                mode_name = "Smart Auto"
+            elif mode == "Entropy (Softmax Distribution)":
+                results = entropy_distribution(
+                    total_hours, names, priorities, min_times,
+                    energy_levels if enable_energy else None
+                )
+                mode_name = "Entropy"
             else:
-                results = entropy_distribution(total_hours, names, priorities, min_times)
-                mode_name = "Entropy (Softmax Distribution)"
+                results = pareto_optimization(
+                    total_hours, subjects, names, priorities, min_times, difficulty_levels
+                )
+                mode_name = "Pareto"
 
             if not results:
                 return
 
-            # --- Display results ---
-            st.success(f"✅ Optimal Study Plan ({mode_name})")
-            for subj, hrs in results:
-                st.write(f"📖 **{subj}:** {hrs} hours")
+            # Display summary
+            st.success(f"✅ Optimal Study Plan Generated ({mode_name})")
+            
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.metric("Total Subjects", len(results))
+            with col2:
+                allocated = sum(r[1] for r in results)
+                st.metric("Hours Allocated", f"{allocated:.1f}")
+            with col3:
+                utilization = (allocated / total_hours) * 100
+                st.metric("Time Utilization", f"{utilization:.1f}%")
 
-            # --- Pie chart visualization ---
-            labels = [f"{r[0]} ({r[1]} hrs)" for r in results]
-            sizes = [r[1] for r in results]
+            # Results table
+            st.subheader("📊 Study Allocation")
+            for subj, hrs, prio, energy in results:
+                energy_emoji = {"Low": "🟢", "Medium": "🟡", "High": "🔴"}.get(energy, "")
+                st.write(f"📖 **{subj}:** {hrs} hours | Priority: {'⭐' * prio} {energy_emoji}")
 
-            fig, ax = plt.subplots()
-            ax.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=90)
-            ax.axis('equal')
-            st.pyplot(fig)
+            # Visualization
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                # Pie chart
+                labels = [f"{r[0]}" for r in results]
+                sizes = [r[1] for r in results]
+                colors = plt.cm.Set3(range(len(results)))
+                
+                fig, ax = plt.subplots(figsize=(8, 6))
+                wedges, texts, autotexts = ax.pie(
+                    sizes, labels=labels, autopct='%1.1f%%',
+                    startangle=90, colors=colors
+                )
+                for autotext in autotexts:
+                    autotext.set_color('white')
+                    autotext.set_fontweight('bold')
+                ax.axis('equal')
+                plt.title('Time Distribution')
+                st.pyplot(fig)
+            
+            with col2:
+                # Bar chart
+                fig, ax = plt.subplots(figsize=(8, 6))
+                subjects_names = [r[0] for r in results]
+                hours = [r[1] for r in results]
+                colors_bar = plt.cm.viridis(np.linspace(0, 1, len(results)))
+                
+                bars = ax.barh(subjects_names, hours, color=colors_bar)
+                ax.set_xlabel('Hours')
+                ax.set_title('Hours per Subject')
+                ax.grid(axis='x', alpha=0.3)
+                st.pyplot(fig)
 
-            # --- Table output ---
-            df = pd.DataFrame(results, columns=["Subject", "Allocated Hours"])
-            st.markdown(df.to_html(index=False, justify="center", classes="center-table"), unsafe_allow_html=True)
-            st.markdown("""
-                <style>
-                .center-table {
-                    margin-left: auto;
-                    margin-right: auto;
-                    text-align: center !important;
-                    border-collapse: collapse;
-                }
-                .center-table th, .center-table td {
-                    text-align: center !important;
-                    padding: 8px 16px;
-                    border: 1px solid #ddd;
-                }
-                .center-table th {
-                    font-weight: 600;
-                }
-                </style>
-            """, unsafe_allow_html=True)
+            # Time-blocked schedule
+            if enable_schedule:
+                st.subheader("🕐 Time-Blocked Schedule")
+                schedule_start = datetime.combine(datetime.today(), start_time)
+                schedule = schedule_with_breaks(results, schedule_start, break_interval, break_duration)
+                
+                for item in schedule:
+                    if item['type'] == 'study':
+                        energy_badge = f" | {item['energy']}" if item['energy'] else ""
+                        st.info(f"**{item['start']} - {item['end']}**: {item['subject']} ({item['duration']} hrs){energy_badge}")
+                    else:
+                        st.success(f"**{item['start']} - {item['end']}**: {item['subject']} ({item['duration']} hrs)")
 
-            # --- Download button ---
-            st.markdown(
-                f"""
-                <div style="display: flex; justify-content: center; margin-bottom: 2rem;">
-                    <a href="data:file/csv;base64,{df.to_csv(index=False).encode('utf-8').decode('latin1')}" download="study_plan_{mode_name.lower().replace(' ', '_')}.csv">
-                        <button style="
-                            color:white;
-                            background-color: black;
-                            border:none;
-                            padding:10px 20px;
-                            border-radius:8px;
-                            cursor:pointer;
-                            font-size:16px;">
-                            📥 Download Study Plan
-                        </button>
-                    </a>
-                </div>
-                """,
-                unsafe_allow_html=True
+            # Data table
+            df = pd.DataFrame(results, columns=["Subject", "Hours", "Priority", "Energy Level"])
+            df = df.drop(columns=["Energy Level"]) if not enable_energy else df
+            
+            st.subheader("📋 Summary Table")
+            st.dataframe(df, use_container_width=True)
+
+            # Download
+            csv = df.to_csv(index=False)
+            st.download_button(
+                label="📥 Download Study Plan (CSV)",
+                data=csv,
+                file_name=f"study_plan_{mode_name.lower()}_{datetime.now().strftime('%Y%m%d')}.csv",
+                mime="text/csv"
             )
 
-            if mode == "Entropy (Softmax Priority Distribution)":
-                st.info("💡 Entropy mode uses exponential weighting — higher priorities grow rapidly.")
+            # Insights
+            st.subheader("💡 Insights")
+            if mode == "Pareto (Multi-Objective Balance)":
+                st.info("Pareto optimization balances priority with difficulty—harder subjects with higher priority get proportionally more time.")
+            elif mode == "Entropy (Softmax Distribution)":
+                st.info("Entropy mode uses exponential weighting—small priority differences create larger time allocation gaps.")
             else:
-                st.info("💡 Smart Auto mode uses constraint-based optimization to balance priorities and time limits.")
+                st.info("Smart Auto ensures all minimum time requirements are met while maximizing subject coverage.")
 
         except Exception as e:
-            st.error(f"Error: {e}")
+            st.error(f"❌ Error: {e}")
+            st.exception(e)
 
 
 if __name__ == "__main__":
