@@ -149,6 +149,7 @@ with col2:
                     <li>Scikit-learn</li>
                     <li>Matplotlib & Seaborn</li>
                     <li>HTML & CSS</li>
+                    <li>Plotly<li>
                 </ul>
                 """, unsafe_allow_html=True)
 
