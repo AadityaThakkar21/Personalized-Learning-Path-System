@@ -1,416 +1,365 @@
 import streamlit as st
-import math
 import pandas as pd
+import numpy as np
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.preprocessing import LabelEncoder
+from datetime import datetime, timedelta
+import io
+import os
 
-# --- Configuration Constants (Defaults) ---
-R_TARGET_DEFAULT = 0.85
-BETA_DEFAULT = 0.2
+# Set page config
+st.set_page_config(page_title="Smart Revision Scheduler", page_icon="📚", layout="wide")
 
-# --- Core Functions ---
-def calculate_optimal_interval(decay_rate: float, ln_r_target_adj: float) -> float:
-    """Calculates the optimal review interval (t_i in days) for a concept."""
-    # We use -ln_r_target_adj because math.log(R_TARGET) is negative.
-    if decay_rate <= 0:
-        return float('inf')
-    
-    optimal_interval = -ln_r_target_adj / decay_rate
-    return optimal_interval
+# Title and description
+st.title("📚 Smart Quiz Revision Scheduler")
+st.markdown("""
+Get personalized revision intervals based on your performance!
+This ML-powered tool analyzes your study patterns to optimize your quiz preparation.
+""")
 
-def update_decay_rate(old_decay_rate: float, quiz_score: float, beta: float) -> float:
-    """
-    Updates the personalized decay rate (lambda) based on a new quiz score.
-    Formula: lambda_new = lambda_old * (1 + BETA * (1 - Score))
-    """
-    # Ensure score is between 0 and 1
-    score = max(0.0, min(1.0, quiz_score))
-    
-    # The term (1 - Score) determines the magnitude of the update.
-    lambda_new = old_decay_rate * (1 + beta * (1 - score))
-    return lambda_new
+# Try to load the CSV file automatically
+csv_file = "quiz_results.csv"
 
-# Helper function to convert days to hours for display
-def format_interval_to_hours(interval_days: float) -> str:
-    """Converts days to hours, rounds down to the lowest whole hour, and handles infinity for display."""
-    if interval_days == float('inf'):
-        return '∞'
-    # Convert days to hours and round down to the lowest whole number (floor)
-    interval_hours = math.floor(interval_days * 24)
-    return f"{interval_hours}"
-
-# --- Streamlit UI ---
-
-st.set_page_config(
-    page_title="Spaced Repetition System (SRS) Model",
-    layout="wide"
-)
-
-st.title("🧠 Spaced Repetition System (SRS) Interval Calculator")
-st.markdown(r"A simple model for calculating optimal review intervals based on a personalized decay rate ($\lambda$).")
-
-# --- User Manual Expander ---
-st.markdown("---")
-with st.expander("📚 User Manual & Variable Descriptions"):
-    st.markdown(r"""
-        This tool uses a simple exponential decay model to calculate your optimal review intervals ($t_i$).
-
-        ### Core Formulas
+if os.path.exists(csv_file):
+    try:
+        # Read the CSV file
+        df = pd.read_csv(csv_file)
         
-        The core formula for calculating the optimal interval ($t_i$) is:
-        $$t_i = \frac{-ln(R_{target})}{\lambda}$$
+        st.success(f"✅ Successfully loaded {csv_file}")
         
-        The formula for updating the personalized decay rate ($\lambda$) is:
-        $$\lambda_{new} = \lambda_{old} \times (1 + \beta \times (1 - \text{Score}))$$
-
-        ### Model Configuration
-
-        * **Target Retention Rate ($R_{{target}}$):**
-            * **Description:** The percentage of knowledge you aim to retain *just* before the next review.
-            * **Usage:** Higher $R_{{target}}$ means shorter, more frequent intervals.
-
-        * **Decay Rate Tuning Parameter ($\beta$):**
-            * **Description:** Controls how quickly your personalized forgetting curve ($\lambda$) adjusts after a quiz score.
-            * **Usage:** Higher $\beta$ means $\lambda$ adjusts more aggressively based on the score.
-
-        ### Concept Table Variables
-
-        * **Forgetting Rate ($\lambda_{{old}}$):**
-            * **Description:** The personalized forgetting rate for a concept *before* the latest quiz.
-            * **Usage:** You estimate this when you first add a concept: **low $\lambda$ for easy concepts, high $\lambda$ for hard concepts.**
-            * *The system updates this value to the "New $\lambda$" after each simulation.*
-
-        * **New Quiz Score (0-1):**
-            * **Description:** Your score from the most recent test/review of that concept (1.0 = 100%).
-            * **Usage:** Your score from the most recent test/review of that concept (1.0 = 100%).
+        # Check required columns
+        required_cols = ['timestamp', 'user_id', 'subject', 'difficulty', 'score', 
+                        'total', 'dataset', 'attempt_no', 'time_spent(mins)']
         
-        * **Deletion:** Checkboxes for deletion will appear when you enter **Deletion Mode**.
-        """)
-st.markdown("---")
-
-# --- Model Configuration Inputs ---
-st.header("1. Model Configuration")
-config_col1, config_col2 = st.columns(2)
-
-with config_col1:
-    st.markdown(r"### Target Retention Rate ($R_{target}$):")
-    r_target = st.slider(
-        'Set $R_{target}$ (decimal)',
-        min_value=0.75, max_value=0.99, value=R_TARGET_DEFAULT, step=0.01,
-        label_visibility="collapsed"
-    )
-    # Calculate the natural log of the target retention rate
-    LN_R_TARGET_ADJ = math.log(r_target)
-    st.info(f"What percentage of the content do you wish to memorize")
-
-with config_col2:
-    st.markdown(r"### Decay Rate Tuning ($\beta$)")
-    beta = st.slider(
-        r'Set Decay Tuning Parameter ($\beta$)',
-        min_value=0.05, max_value=0.50, value=BETA_DEFAULT, step=0.01,
-        label_visibility="collapsed"
-    )
-    st.info(r"A higher $\beta$ means the rate at which you forget adjusts more aggressively based on the quiz score to calculate the interval hours of revision")
-
-st.markdown("---")
-
-# --- Main App: Input Table ---
-
-st.header("2. Define Your Concepts")
-
-# Initialize session state for the dataframe if it doesn't exist
-if 'df_srs' not in st.session_state:
-    st.session_state.df_srs = pd.DataFrame({
-        'Concept': ['T-tests (Hard)', 'Linear Algebra Basics (Easy)'],
-        'Initial Lambda': [0.15, 0.05], # FIXED: Must use 'Initial Lambda' as the internal key
-        'New Quiz Score (0-1)': [0.70, 0.98],
-        'Delete?': [False, False] # Added the new boolean column for deletion
-    })
-    # Ensure the 'Delete?' column is explicitly boolean for the checkbox to work correctly
-    st.session_state.df_srs['Delete?'] = st.session_state.df_srs['Delete?'].astype(bool)
-
-# Initialize delete mode state
-if 'delete_mode' not in st.session_state:
-    st.session_state.delete_mode = False
-       
-def toggle_delete_mode():
-    """Toggles the state between edit mode and delete mode."""
-    st.session_state.delete_mode = not st.session_state.delete_mode
-    # Reset deletion marks when changing mode
-    if 'df_srs' in st.session_state and 'Delete?' in st.session_state.df_srs.columns:
-         st.session_state.df_srs['Delete?'] = False
-    st.rerun()
-
-# --- Row Deletion Logic (New Checkbox-based Logic) ---
-
-def delete_marked_rows():
-    """Filters the dataframe to remove all rows where 'Delete?' is True and exits delete mode."""
-    
-    if st.session_state.df_srs.empty:
-        st.warning("The table is empty. Nothing to delete.")
-        st.session_state.delete_mode = False # Exit delete mode
-        st.rerun()
-        return
-        
-    # Get the number of rows marked for deletion
-    rows_to_delete_count = st.session_state.df_srs['Delete?'].sum()
-    
-    if rows_to_delete_count > 0:
-        # Filter the DataFrame to keep only the rows where 'Delete?' is False
-        df_retained = st.session_state.df_srs[st.session_state.df_srs['Delete?'] == False].copy()
-        
-        # Reset the 'Delete?' column on the retained rows to False to unmark them
-        df_retained['Delete?'] = False
-        
-        st.session_state.df_srs = df_retained
-        
-        st.success(f"Successfully deleted {rows_to_delete_count} concept(s).")
-    else:
-        st.warning("No rows were marked for deletion. Check the 'Mark to Delete' column to select rows.")
-    
-    st.session_state.delete_mode = False # Exit delete mode after operation
-    st.rerun()
-
-# --- Display Header based on mode ---
-
-if st.session_state.delete_mode:
-    st.markdown("### 🗑️ Delete Mode: Check rows to remove, then confirm.")
-else:
-    st.markdown("### 📝 Edit Mode: Edit concepts and scores")
-
-# --- Data Editor Configuration (Dynamic based on mode) ---
-
-# Base column configurations
-base_config = {
-    "Concept": st.column_config.TextColumn("Concept Name", required=True),
-    "Initial Lambda": st.column_config.NumberColumn(
-        r"Initial Forgetting Rate", 
-        help="Higher value means faster initial forgetting (e.g., 0.05 for easy, 0.15 for hard).",
-        min_value=0.001,
-        step=0.01
-    ),
-    "New Quiz Score (0-1)": st.column_config.NumberColumn(
-        "New Quiz Score",
-        help="Score from the latest review (0.0 to 1.0).",
-        min_value=0.0,
-        max_value=1.0,
-        step=0.01
-    )
-}
-
-# Full config including the deletion checkbox
-full_config = base_config.copy()
-full_config["Delete?"] = st.column_config.CheckboxColumn(
-    "Mark to Delete",
-    default=False,
-    help="Check this box to delete the row."
-)
-
-df_to_edit = st.session_state.df_srs.copy()
-
-if st.session_state.delete_mode:
-    # In Delete Mode: Show all columns, and disable editing on non-delete columns
-    editor_config = full_config.copy()
-    
-    # Disable editing on the core columns
-    # We must explicitly redefine the columns to set 'disabled=True'
-    editor_config["Concept"] = st.column_config.TextColumn("Concept Name", required=True, disabled=True)
-    editor_config["Initial Lambda"] = st.column_config.NumberColumn(r"Initial Forgetting Rate", disabled=True)
-    editor_config["New Quiz Score (0-1)"] = st.column_config.NumberColumn("New Quiz Score", disabled=True)
-    
-    editor_key = "data_editor_delete_mode"
-    
-else:
-    # In Edit Mode: Hide the Delete? column by dropping it from the DataFrame passed to the editor
-    df_to_edit = df_to_edit.drop(columns=['Delete?'])
-    editor_config = base_config
-    editor_key = "data_editor_edit_mode"
-
-# Editable Dataframe
-edited_df = st.data_editor(
-    df_to_edit,
-    num_rows="dynamic",
-    column_config=editor_config,
-    hide_index=True,
-    key=editor_key
-)
-
-# --- Session State Update Logic ---
-# CRITICAL: Always update the session state with the latest edited data, handling column presence.
-
-if st.session_state.delete_mode:
-    # If in delete mode, the editor output contains the full dataframe (including the updated 'Delete?' state)
-    st.session_state.df_srs = edited_df.copy()
-    
-else: 
-    # If in edit mode, the editor output is missing the 'Delete?' column (it was dropped for display).
-    # We must re-add the 'Delete?' column from the previous state, carefully handling row changes (additions/deletions).
-    
-    new_length = len(edited_df)
-    old_delete_data = st.session_state.df_srs['Delete?'].values
-    old_length = len(old_delete_data)
-
-    # 1. Determine the correct new state for the 'Delete?' column
-    if new_length > old_length:
-        # Rows were added: Extend with False for the new rows
-        new_delete_data = list(old_delete_data) + [False] * (new_length - old_length)
-    elif new_length < old_length:
-        # Rows were deleted: Truncate the delete column data
-        
-        # Simple deletion handling (assuming most operations are append/remove last):
-        new_delete_data = old_delete_data[:new_length].tolist()
-        
-    else:
-        # Same length: Keep the old data
-        new_delete_data = old_delete_data.tolist()
-
-    # 2. Create the new full DataFrame and update session state
-    new_df = edited_df.copy().reset_index(drop=True)
-    
-    # Ensure the length matches before assigning
-    if len(new_delete_data) != len(new_df):
-        # This catch is for complex deletions/reorderings in edit mode. Reset to all False if length mismatch.
-        new_df['Delete?'] = [False] * len(new_df)
-    else:
-        new_df['Delete?'] = new_delete_data
-        
-    st.session_state.df_srs = new_df
-
-
-# --- Display Buttons based on mode (NEW POSITION BELOW TABLE) ---
-btn_col1, btn_col2, _ = st.columns([1.5, 1.5, 3])
-
-if st.session_state.delete_mode:
-    
-    btn_col1.button("✅ Confirm Deletion", 
-                    on_click=delete_marked_rows, 
-                    type="primary", 
-                    key="confirm_delete_btn",
-                    help="Permanently deletes all rows marked with a checkmark.")
-    
-    btn_col2.button("❌ Cancel Deletion Mode", 
-                    on_click=toggle_delete_mode, 
-                    type="secondary",
-                    key="cancel_delete_btn",
-                    help="Go back to the editing mode without deleting.")
-    
-else:
-    btn_col1.button("🗑️ Enter Deletion Mode", 
-                    on_click=toggle_delete_mode, 
-                    type="secondary",
-                    key="enter_delete_btn",
-                    help="Click to show checkboxes and select rows for deletion.")
-
-
-st.markdown("---") 
-
-# --- Calculation Logic ---
-
-# Use the data directly from the updated session state for calculation
-current_df_for_calc = st.session_state.df_srs 
-
-if not current_df_for_calc.empty:
-    st.header("3. Simulation Results")
-    
-    # Calculation
-    results = []
-    # List to store all raw optimal intervals (in hours) for finding the minimum
-    raw_intervals_hours = [] 
-
-    for index, row in current_df_for_calc.iterrows():
-        # Ensure data is valid before processing and skip marked rows
-        try:
-            concept = row['Concept']
-            # IMPORTANT: Skip calculation for rows marked for deletion (if still in delete mode)
-            if row['Delete?'] == True:
-                continue
-                
-            old_lambda = float(row['Initial Lambda']) # FIXED: Access the data using the correct internal column name 'Initial Lambda'
-            new_score = float(row['New Quiz Score (0-1)'])
-        except (ValueError, TypeError):
-            # Skip rows where input is invalid (e.g., empty string in a number field)
-            continue 
-
-        # Calculate initial optimal interval (result is in Days)
-        initial_interval_days = calculate_optimal_interval(old_lambda, LN_R_TARGET_ADJ)
-        
-        # Calculate new lambda and new interval (result is in Days)
-        new_lambda = update_decay_rate(old_lambda, new_score, beta)
-        new_interval_days = calculate_optimal_interval(new_lambda, LN_R_TARGET_ADJ)
-        
-        # Convert to raw hours for finding the minimum. Store 'inf' if applicable.
-        if new_interval_days != float('inf'):
-            new_interval_hours_raw = new_interval_days * 24
-            raw_intervals_hours.append(new_interval_hours_raw)
+        if not all(col in df.columns for col in required_cols):
+            st.error(f"Missing required columns. Please ensure your CSV has: {', '.join(required_cols)}")
         else:
-             raw_intervals_hours.append(float('inf'))
-        
-        # Determine the change in interval (comparison uses days)
-        if new_interval_days == float('inf') and initial_interval_days != float('inf'):
-             interval_change = 'Stopped Forgetting'
-        elif new_interval_days > initial_interval_days:
-             interval_change = 'Increased ⬆️'
-        elif new_interval_days < initial_interval_days:
-             interval_change = 'Decreased ⬇️'
-        else:
-             interval_change = 'No Change'
-        
-        results.append({
-            'Concept': concept,
-            r'Initial Forgetting Rate': f"{old_lambda:.4f}",
-            # Apply format_interval_to_hours for output display
-            'Initial Interval (Hours)': format_interval_to_hours(initial_interval_days),
-            'New Score': f"{new_score:.2f}",
-            r'New Forgetting Rate': f"{new_lambda:.4f}",
-            # Apply format_interval_to_hours for output display
-            'New Optimal Interval (Hours)': format_interval_to_hours(new_interval_days),
-            'Interval Change': interval_change
-        })
-        
-    df_results = pd.DataFrame(results)
-
-    # --- New Minimum Interval Calculation & Display ---
-    st.subheader("📚 Next Actionable Review Time")
-    
-    col_min, col_spacer = st.columns([1, 2])
-    
-    with col_min:
-        if raw_intervals_hours:
-            # Find the minimum interval (in hours). float('inf') will be ignored if real numbers exist.
-            min_raw_interval = min(raw_intervals_hours)
+            # Sidebar filters
+            st.sidebar.header("🔍 Filter Your Data")
             
-            # Round down to the lowest integer hour, or keep infinity symbol
-            if min_raw_interval == float('inf'):
-                 st.metric(
-                     label="Earliest Required Review (Hours)", 
-                     value="∞",
-                     help="All concepts have an infinite interval, meaning you've effectively mastered them based on current settings."
-                 )
+            # Get unique values for filters
+            users = sorted(df['user_id'].unique())
+            subjects = sorted(df['subject'].unique())
+            difficulties = sorted(df['difficulty'].unique())
+            
+            st.sidebar.info(f"📌 Available Users: {len(users)}\n📌 Available Subjects: {len(subjects)}")
+            
+            # Filter inputs
+            selected_user = st.sidebar.selectbox("Select User ID", users)
+            selected_subject = st.sidebar.selectbox("Select Subject", subjects)
+            selected_difficulty = st.sidebar.selectbox("Select Difficulty", difficulties)
+            
+            # Filter data
+            filtered_df = df[
+                (df['user_id'] == selected_user) & 
+                (df['subject'] == selected_subject) & 
+                (df['difficulty'] == selected_difficulty)
+            ].copy()
+            
+            # Show filtered data
+            st.subheader("🔎 Filtered Data")
+            st.markdown(f"**Selected:** User: `{selected_user}` | Subject: `{selected_subject}` | Difficulty: `{selected_difficulty}`")
+            
+            # Check if data exists for selected filters
+            is_prediction_mode = False
+            training_data = filtered_df.copy()
+            
+            if len(filtered_df) == 0:
+                st.warning(f"⚠️ No data found for {selected_difficulty} difficulty in {selected_subject}")
+                st.info("💡 Don't worry! We'll use your performance data from other difficulties to predict optimal intervals.")
+                
+                # Get data for same user and subject but all difficulties
+                training_data = df[
+                    (df['user_id'] == selected_user) & 
+                    (df['subject'] == selected_subject)
+                ].copy()
+                
+                if len(training_data) == 0:
+                    st.error("❌ No data found for this user and subject combination. Please try different selections.")
+                    st.stop()
+                else:
+                    st.success(f"✅ Found {len(training_data)} records from other difficulties to train the model")
+                    
+                    # Display available difficulties for this subject
+                    available_diffs = training_data['difficulty'].unique()
+                    st.info(f"📊 Using your performance data from: {', '.join(available_diffs)}")
+                    
+                    is_prediction_mode = True
             else:
-                 # Round down to the lowest number using math.floor()
-                 min_rounded_down_hours = math.floor(min_raw_interval)
-                 st.metric(
-                     label="Earliest Required Review (Hours)", 
-                     value=f"{min_rounded_down_hours} h",
-                     help="This is the minimum optimal interval across all concepts, rounded down to the nearest hour."
-                 )
-        else:
-            st.info("No valid intervals to calculate the minimum review time.")
+                st.success(f"✅ Found {len(filtered_df)} records matching your filters")
+                
+                # Display filtered data in expandable section
+                with st.expander("📋 View Filtered Data", expanded=True):
+                    st.dataframe(filtered_df, use_container_width=True)
+            
+            st.divider()
+            
+            # Show different message for prediction mode
+            if is_prediction_mode:
+                st.info(f"🎯 Predicting optimal intervals for **{selected_difficulty}** difficulty based on your performance in other difficulties")
+            
+            # Display performance summary
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.subheader("📈 Your Performance Summary")
+                
+                if is_prediction_mode:
+                    # Show aggregate performance from other difficulties
+                    avg_score = (training_data['score'] / training_data['total'] * 100).mean()
+                    total_attempts = len(training_data)
+                    avg_time = training_data['time_spent(mins)'].mean()
+                    st.caption("(Based on other difficulties)")
+                else:
+                    # Show performance for selected difficulty
+                    avg_score = (filtered_df['score'] / filtered_df['total'] * 100).mean()
+                    total_attempts = len(filtered_df)
+                    avg_time = filtered_df['time_spent(mins)'].mean()
+                
+                metric_col1, metric_col2, metric_col3 = st.columns(3)
+                metric_col1.metric("Average Score", f"{avg_score:.1f}%")
+                metric_col2.metric("Total Attempts", total_attempts)
+                metric_col3.metric("Avg Time (mins)", f"{avg_time:.1f}")
+            
+            with col2:
+                st.subheader("📋 Recent Attempts")
+                
+                if is_prediction_mode:
+                    recent_data = training_data.tail(5)[['timestamp', 'difficulty', 'score', 'total', 'time_spent(mins)']].copy()
+                    st.caption("(From other difficulties)")
+                else:
+                    recent_data = filtered_df.tail(5)[['timestamp', 'score', 'total', 'time_spent(mins)']].copy()
+                
+                recent_data['percentage'] = (recent_data['score'] / recent_data['total'] * 100).round(1)
+                st.dataframe(recent_data, use_container_width=True)
+            
+            st.divider()
+            
+            # ML Model Section
+            st.subheader("🤖 ML-Powered Revision Scheduler")
+            
+            # Time until quiz input
+            days_until_quiz = st.slider(
+                "⏰ How many days until your quiz?",
+                min_value=1,
+                max_value=90,
+                value=14,
+                help="Select the number of days remaining until your quiz"
+            )
+            
+            if st.button("🎯 Generate Optimal Revision Schedule", type="primary"):
+                with st.spinner("Analyzing your study patterns..."):
+                    # Prepare training data with difficulty encoding
+                    training_data['score_percentage'] = (training_data['score'] / training_data['total']) * 100
+                    training_data['attempt_no'] = training_data['attempt_no'].astype(int)
+                    
+                    # Encode difficulty levels
+                    le = LabelEncoder()
+                    training_data['difficulty_encoded'] = le.fit_transform(training_data['difficulty'])
+                    
+                    # Prepare training data - now including difficulty as a feature
+                    X = training_data[['score_percentage', 'attempt_no', 'time_spent(mins)', 'difficulty_encoded']].values
+                    
+                    # Calculate ideal interval based on performance
+                    # Better performance = longer intervals (spaced repetition)
+                    y = []
+                    for _, row in training_data.iterrows():
+                        score_pct = row['score_percentage']
+                        if score_pct >= 90:
+                            ideal_gap = 7  # Strong retention
+                        elif score_pct >= 75:
+                            ideal_gap = 5  # Good retention
+                        elif score_pct >= 60:
+                            ideal_gap = 3  # Moderate retention
+                        else:
+                            ideal_gap = 2  # Needs frequent review
+                        y.append(ideal_gap)
+                    
+                    # Train model
+                    model = RandomForestRegressor(n_estimators=100, random_state=42)
+                    model.fit(X, y)
+                    
+                    # Predict optimal interval for current performance
+                    if is_prediction_mode:
+                        # For prediction mode, use average performance from other difficulties
+                        avg_performance = training_data.groupby('difficulty').agg({
+                            'score_percentage': 'mean',
+                            'attempt_no': 'max',
+                            'time_spent(mins)': 'mean'
+                        }).mean()
+                        
+                        # Encode the target difficulty
+                        if selected_difficulty in le.classes_:
+                            target_difficulty_encoded = le.transform([selected_difficulty])[0]
+                        else:
+                            # If difficulty not seen before, use medium difficulty encoding
+                            target_difficulty_encoded = le.transform([le.classes_[len(le.classes_)//2]])[0]
+                        
+                        prediction_input = [[
+                            avg_performance['score_percentage'],
+                            avg_performance['attempt_no'],
+                            avg_performance['time_spent(mins)'],
+                            target_difficulty_encoded
+                        ]]
+                        
+                        st.info(f"📊 Using average performance metrics to predict for {selected_difficulty} difficulty")
+                    else:
+                        # Use actual latest performance
+                        latest_performance = training_data.iloc[-1]
+                        prediction_input = [[
+                            latest_performance['score_percentage'],
+                            latest_performance['attempt_no'],
+                            latest_performance['time_spent(mins)'],
+                            latest_performance['difficulty_encoded']
+                        ]]
+                    
+                    base_interval = model.predict(prediction_input)[0]
+                    
+                    # Adjust based on days until quiz
+                    num_sessions = max(2, int(days_until_quiz / base_interval))
+                    optimal_interval = days_until_quiz / num_sessions
+                    
+                    # Round the optimal interval
+                    # If decimal part <= 0.5, round to nearest 0.5, otherwise round up
+                    decimal_part = optimal_interval - int(optimal_interval)
+                    if decimal_part <= 0.5:
+                        rounded_interval = int(optimal_interval) + (0.5 if decimal_part > 0 else 0)
+                    else:
+                        rounded_interval = int(optimal_interval) + 1
+                    
+                    # Display results
+                    st.success("✅ Your personalized revision schedule is ready!")
+                    
+                    result_col1, result_col2 = st.columns(2)
+                    
+                    with result_col1:
+                        st.metric(
+                            "Optimal Revision Interval (Exact)",
+                            f"{optimal_interval:.1f} days",
+                            help="Precise recommended gap between study sessions"
+                        )
+                        st.metric(
+                            "Optimal Revision Interval (Rounded)",
+                            f"{rounded_interval} days" if rounded_interval == int(rounded_interval) else f"{rounded_interval:.1f} days",
+                            help="Practical rounded interval for easier scheduling"
+                        )
+                        st.metric(
+                            "Recommended Sessions",
+                            f"{num_sessions} sessions",
+                            help="Total number of revision sessions before quiz"
+                        )
+                    
+                    with result_col2:
+                        # Performance indicator
+                        if avg_score >= 80:
+                            performance_emoji = "🌟"
+                            performance_text = "Excellent"
+                            color = "green"
+                        elif avg_score >= 60:
+                            performance_emoji = "👍"
+                            performance_text = "Good"
+                            color = "blue"
+                        else:
+                            performance_emoji = "📖"
+                            performance_text = "Needs Practice"
+                            color = "orange"
+                        
+                        st.markdown(f"### {performance_emoji} Performance: {performance_text}")
+                        st.progress(min(avg_score / 100, 1.0))
+                    
+                    # Generate schedule
+                    st.subheader("📅 Your Revision Schedule")
+                    
+                    schedule_data = []
+                    current_date = datetime.now()
+                    
+                    for i in range(num_sessions):
+                        session_date = current_date + timedelta(days=i * optimal_interval)
+                        schedule_data.append({
+                            'Session': f"Session {i+1}",
+                            'Date': session_date.strftime('%Y-%m-%d'),
+                            'Day': session_date.strftime('%A'),
+                            'Days Until Quiz': int(days_until_quiz - (i * optimal_interval))
+                        })
+                    
+                    schedule_df = pd.DataFrame(schedule_data)
+                    st.dataframe(schedule_df, use_container_width=True)
+                    
+                    # Recommendations
+                    st.subheader("💡 Personalized Recommendations")
+                    
+                    recommendations = []
+                    
+                    if avg_score < 60:
+                        recommendations.append("📌 Focus on fundamentals - your scores suggest more practice is needed")
+                        recommendations.append("📌 Consider shorter, more frequent sessions")
+                    elif avg_score < 80:
+                        recommendations.append("📌 You're doing well! Focus on challenging areas")
+                        recommendations.append("📌 Mix practice with theory review")
+                    else:
+                        recommendations.append("📌 Excellent performance! Focus on maintaining knowledge")
+                        recommendations.append("📌 Use spaced repetition to optimize retention")
+                    
+                    if avg_time < 10:
+                        recommendations.append("📌 Try extending your study sessions for deeper learning")
+                    elif avg_time > 45:
+                        recommendations.append("📌 Consider taking breaks to maintain focus")
+                    
+                    for rec in recommendations:
+                        st.info(rec)
+                    
+                    # Download schedule
+                    csv_buffer = io.StringIO()
+                    schedule_df.to_csv(csv_buffer, index=False)
+                    
+                    st.download_button(
+                        label="📥 Download Schedule as CSV",
+                        data=csv_buffer.getvalue(),
+                        file_name=f"revision_schedule_{selected_subject}_{selected_difficulty}.csv",
+                        mime="text/csv"
+                    )
+    
+    except Exception as e:
+        st.error(f"Error processing file: {str(e)}")
+        st.info("Please ensure your CSV file has the correct format and columns.")
 
-    st.markdown("---") 
-    
-    # --- Display Detailed Results (existing part) ---
-    st.subheader("Detailed Optimal Intervals and Decay Rate Adjustments")
-    # Ensuring the Pandas index is hidden in the results table display
-    st.dataframe(df_results, hide_index=True, use_container_width=True)
-
-    # --- Summary of Impact ---
-    st.subheader("Summary of Spaced Repetition Logic")
-    
-    st.markdown(
-        r"""
-        - **Low Score (e.g., 0.70):** If the user scores low, the system assumes they are forgetting the concept **faster**. The decay rate ($\lambda$) is **increased**, and the optimal review interval is **decreased** (review sooner).
-        - **High Score (e.g., 0.98):** If the user scores high, the system assumes they are forgetting the concept **slower**. The decay rate ($\lambda$) is **decreased**, and the optimal review interval is **increased** (review later).
-        """
-    )
-    
 else:
-    st.warning("Please add at least one concept to the table to run the simulation.")
+    # Error message when file is not found
+    st.error(f"❌ Could not find '{csv_file}' in the current directory")
+    st.info("""
+    **Please ensure:**
+    1. The file `quiz_results.csv` is in the same directory as this script
+    2. The file has the correct name (case-sensitive)
+    3. The file is not corrupted
+    """)
+    
+    st.subheader("📋 Required CSV Format")
+    st.markdown("""
+    Your CSV file should contain the following columns:
+    - **timestamp**: Date/time of the attempt
+    - **user_id**: Unique identifier for the user
+    - **subject**: Subject name (e.g., Math, Science)
+    - **difficulty**: Difficulty level (e.g., Easy, Medium, Hard)
+    - **score**: Points scored
+    - **total**: Total possible points
+    - **dataset**: Dataset identifier
+    - **attempt_no**: Attempt number
+    - **time_spent(mins)**: Time spent in minutes
+    """)
+    
+    # Sample data
+    sample_data = {
+        'timestamp': ['2024-01-01 10:00', '2024-01-05 14:30'],
+        'user_id': ['user123', 'user123'],
+        'subject': ['Math', 'Math'],
+        'difficulty': ['Medium', 'Medium'],
+        'score': [8, 9],
+        'total': [10, 10],
+        'dataset': ['quiz1', 'quiz1'],
+        'attempt_no': [1, 2],
+        'time_spent(mins)': [15, 12]
+    }
+    
+    sample_df = pd.DataFrame(sample_data)
+    st.subheader("📝 Sample Data Format")
+    st.dataframe(sample_df)
