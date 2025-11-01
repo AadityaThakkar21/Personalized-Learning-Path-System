@@ -215,3 +215,4 @@ timestamp,user_id,subject,difficulty,score,total,dataset,attempt_no,time_spent(m
 2025-10-17T11:00:00,110,Social Studies,Easy,3,5,quiz_data.csv,5,3
 2025-10-10T14:00:00,110,Social Studies,Intermediate,4,5,quiz_data.csv,6,6
 2025-10-09T14:00:00,110,Social Studies,Hard,4,5,quiz_data.csv,7,9
+2025-11-01T16:13:53,102,Maths,Easy,5,5,quiz_data.csv,7,0.37
