@@ -4,14 +4,14 @@ import numpy as np
 from datetime import datetime
 
 # =====================================================
-# Knowledge Gap Detector (Enhanced with Difficulty Weighting)
+# Knowledge Gap Detector (Enhanced with Difficulty Weighting + Smart Trend Detection)
 # =====================================================
 
 def run():
     st.set_page_config(page_title="Knowledge Gap Detector", layout="wide")
     st.title("🧩 Knowledge Gap & Performance Predictor")
 
-    st.write("Analyze your quiz results, identify weak areas, and predict your future performance.")
+    st.write("Analyze your quiz results, and predict your future performance.")
 
     # Load results file
     try:
@@ -50,6 +50,7 @@ def run():
 
     all_predictions = []
     score_trends = []
+    subject_slopes = {}
 
     for subject in user_df["subject"].unique():
         sub_df = user_df[user_df["subject"] == subject].sort_values(by="timestamp")
@@ -76,9 +77,24 @@ def run():
         else:
             slope = 0
 
+        subject_slopes[subject] = slope  # store for later comparison
+
         predicted_score = max(0, min(5, round(weighted_avg + slope, 0)))
 
-        # Determine trend text
+        # =====================================================
+        # Enhanced Trend Detection and Reasoning
+        # =====================================================
+        avg_score = np.mean(raw_scores)
+        last_score = raw_scores[-1]
+        recent_scores = raw_scores[-3:] if len(raw_scores) >= 3 else raw_scores
+        recent_avg = np.mean(recent_scores)
+
+        # Micro-trend detection
+        micro_slope = 0
+        if len(recent_scores) > 1:
+            x_recent = np.arange(len(recent_scores))
+            micro_slope = np.polyfit(x_recent, recent_scores, 1)[0]
+
         if slope > 0.1:
             trend = "Improving"
             reason = "Your recent scores show steady improvement — great job!"
@@ -87,13 +103,44 @@ def run():
             reason = "Your performance dipped slightly; revise weak topics and review harder questions."
         else:
             trend = "Stable"
-            reason = "Your performance is consistent; keep practicing to maintain it."
 
-        # Adjust reasoning with difficulty insight
-        if sub_df["difficulty"].iloc[-1] == "Hard" and slope >= 0:
-            reason += " You’re handling harder questions effectively, which shows real progress."
-        elif sub_df["difficulty"].iloc[-1] == "Easy" and slope < 0:
-            reason += " Since the difficulty was easier, aim for higher accuracy next time."
+            if micro_slope > 0.05 and avg_score < 3:
+                reason = "Your overall trend is stable but with slight improvement — good signs of progress!"
+            elif avg_score < 2:
+                reason = "Your performance is stable but below average — focus on understanding core concepts."
+            elif recent_avg <= avg_score and avg_score < 3:
+                reason = "Your performance is stable but not showing progress — try reviewing problem areas and attempting varied questions."
+            elif avg_score < 4:
+                reason = "Your performance is consistent; a bit more practice can boost your scores."
+            else:
+                reason = "Your performance is consistently strong; keep it up!"
+
+               # =========================================
+        # Difficulty-based contextual reasoning (timestamp-aware)
+        # =========================================
+
+        # Ensure the data is sorted chronologically (oldest → newest)
+        sub_df = sub_df.sort_values(by="timestamp")
+
+        # Difficulty levels (numeric scale)
+        diff_levels = {"Easy": 1, "Intermediate": 2, "Hard": 3}
+
+        # Compute average difficulty value
+        avg_diff_val = np.mean([diff_levels.get(d, 2) for d in sub_df["difficulty"]])
+
+        # Get last attempt difficulty based on most recent timestamp
+        last_diff = sub_df.iloc[-1]["difficulty"]
+        last_diff_val = diff_levels.get(last_diff, 2)
+
+        # Compare last difficulty to average
+        if last_diff_val > avg_diff_val + 0.3:  # harder than usual
+            if slope >= 0:
+                reason += " Despite tackling harder questions recently, your performance is holding steady — nice work!"
+            else:
+                reason += " Your recent quiz was harder than usual, which may explain the slight dip in your performance."
+        elif last_diff_val < avg_diff_val - 0.3:  # easier than usual
+            if slope < 0:
+                reason += " Since your most recent quiz was easier than your usual level, aim for higher accuracy next time."
 
         # Percentile estimation across subjects
         all_predictions.append(predicted_score)
@@ -105,8 +152,7 @@ def run():
 
     overall_pred = np.mean(all_predictions)
     percentile = round((overall_pred / 5) * 100, 1)
-    if percentile > 100: percentile = 100
-    if percentile < 0: percentile = 0
+    percentile = max(0, min(100, percentile))
 
     # ---- Display Results ----
     st.markdown("### 🧠 Subject-Wise Analysis")
@@ -121,6 +167,17 @@ def run():
         """)
 
     st.markdown("---")
+
+    # ---- Most Improved Subject ----
+    if subject_slopes:
+        best_subject = max(subject_slopes, key=subject_slopes.get)
+        best_slope = subject_slopes[best_subject]
+        if best_slope > 0.1:
+            st.success(f"🏆 **Most Improved Subject:** {best_subject} — showing strong upward progress!")
+        else:
+            st.info(f"📘 **Most Consistent Subject:** {best_subject} — maintaining steady performance.")
+
+    # ---- Overall Prediction ----
     st.markdown(f"### 🎯 Overall Predicted Percentile: **{percentile}%**")
     if percentile >= 85:
         st.success("Excellent performance! Keep maintaining this level of consistency.")
