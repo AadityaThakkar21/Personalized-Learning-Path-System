@@ -3,10 +3,10 @@ import pulp
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 
-def logical_optimization(total_hours, subjects, names, priorities, min_times, energy_levels=None):
-    """Enhanced two-stage linear optimization with optional energy matching."""
+def logical_optimization(total_hours, subjects, names, priorities, min_times):
+    """Two-stage linear optimization without energy levels."""
     M = float(total_hours)
 
     # Stage 1: Max subjects possible
@@ -56,12 +56,11 @@ def logical_optimization(total_hours, subjects, names, priorities, min_times, en
         if pulp.value(y2[i]) > 0.5:
             raw_time = pulp.value(x2[i])
             rounded_time = round(raw_time * 2) / 2
-            energy = energy_levels[i] if energy_levels else None
-            results.append((names[i] or f"Subject {i+1}", rounded_time, priorities[i], energy))
+            results.append((names[i] or f"Subject {i+1}", rounded_time, priorities[i]))
     return results
 
 
-def entropy_distribution(total_hours, names, priorities, min_times, energy_levels=None):
+def entropy_distribution(total_hours, names, priorities, min_times):
     """Entropy-based (Softmax) direct allocation."""
     n = len(names)
     min_total = sum(min_times)
@@ -80,13 +79,12 @@ def entropy_distribution(total_hours, names, priorities, min_times, energy_level
 
     results = []
     for i in range(n):
-        energy = energy_levels[i] if energy_levels else None
-        results.append((names[i], final_times[i], priorities[i], energy))
+        results.append((names[i], final_times[i], priorities[i]))
     return results
 
 
 def pareto_optimization(total_hours, subjects, names, priorities, min_times, difficulty_levels):
-    """NEW: Multi-objective optimization balancing priority and difficulty."""
+    """Multi-objective optimization balancing priority and difficulty."""
     min_total = sum(min_times)
     if min_total > total_hours:
         st.error("Total hours too small for minimum time requirements.")
@@ -100,7 +98,7 @@ def pareto_optimization(total_hours, subjects, names, priorities, min_times, dif
     combined_scores = 0.6 * norm_priorities + 0.4 * norm_difficulties
     
     remaining = total_hours - min_total
-    weights = np.exp(combined_scores * 2)  # Exponential weighting
+    weights = np.exp(combined_scores * 2)
     softmax_weights = weights / np.sum(weights)
     
     extra_time = remaining * softmax_weights
@@ -109,16 +107,16 @@ def pareto_optimization(total_hours, subjects, names, priorities, min_times, dif
     
     results = []
     for i in range(subjects):
-        results.append((names[i], final_times[i], priorities[i], None))
+        results.append((names[i], final_times[i], priorities[i]))
     return results
 
 
 def schedule_with_breaks(results, start_time, break_interval=1.5, break_duration=0.25):
-    """NEW: Generate time-blocked schedule with breaks."""
+    """Generate time-blocked schedule with breaks."""
     schedule = []
     current_time = start_time
     
-    for subj, hrs, _, energy in results:
+    for subj, hrs, _ in results:
         remaining = hrs
         while remaining > 0:
             study_block = min(remaining, break_interval)
@@ -128,8 +126,7 @@ def schedule_with_breaks(results, start_time, break_interval=1.5, break_duration
                 'start': current_time.strftime('%I:%M %p'),
                 'end': end_time.strftime('%I:%M %p'),
                 'duration': study_block,
-                'type': 'study',
-                'energy': energy
+                'type': 'study'
             })
             current_time = end_time
             remaining -= study_block
@@ -141,8 +138,7 @@ def schedule_with_breaks(results, start_time, break_interval=1.5, break_duration
                     'start': current_time.strftime('%I:%M %p'),
                     'end': break_end.strftime('%I:%M %p'),
                     'duration': break_duration,
-                    'type': 'break',
-                    'energy': None
+                    'type': 'break'
                 })
                 current_time = break_end
     
@@ -153,24 +149,21 @@ def run():
     st.title("📅 Advanced Study Timetable Generator")
     st.markdown("*Optimize your study time with AI-powered scheduling*")
 
-    # Sidebar for advanced settings
+    # Sidebar
     with st.sidebar:
         st.header("⚙️ Advanced Settings")
-        enable_energy = st.checkbox("Enable Energy Level Matching", value=False)
         enable_schedule = st.checkbox("Generate Time-Blocked Schedule", value=False)
         if enable_schedule:
-            start_time = st.time_input("Start Time:", value=datetime.now().time())
+            start_time = st.time_input("Start Time:", value=time(9, 0))
             break_interval = st.slider("Study block duration (hrs):", 0.5, 3.0, 1.5, 0.5)
             break_duration = st.slider("Break duration (hrs):", 0.1, 0.5, 0.25, 0.05)
 
-    # Main input section
     total_hours = st.number_input("Enter the number of free hours you have today:", min_value=0.5, step=0.5, value=6.0)
     subjects = st.number_input("Enter the number of subjects you wish to cover:", min_value=1, step=1, value=3)
 
-    names, priorities, min_times, energy_levels, difficulty_levels = [], [], [], [], []
+    names, priorities, min_times, difficulty_levels = [], [], [], []
     
     st.subheader("Enter details for each subject:")
-    
     for i in range(subjects):
         with st.expander(f"📚 Subject {i+1}", expanded=(i==0)):
             col1, col2 = st.columns(2)
@@ -179,14 +172,6 @@ def run():
                 priority = st.select_slider("Priority:", options=[1,2,3,4,5], value=3, key=f"priority_{i}")
                 min_time = st.number_input("Minimum time (hrs):", min_value=0.0, step=0.5, key=f"min_{i}", value=0.5)
             with col2:
-                if enable_energy:
-                    energy = st.select_slider(
-                        "Energy Level Required:",
-                        options=["Low", "Medium", "High"],
-                        value="Medium",
-                        key=f"energy_{i}"
-                    )
-                    energy_levels.append(energy)
                 difficulty = st.select_slider("Difficulty:", options=[1,2,3,4,5], value=3, key=f"diff_{i}")
                 difficulty_levels.append(difficulty)
             
@@ -211,33 +196,23 @@ def run():
     )
 
     # Generate button
-    if st.button("🚀 Generate Optimal Timetable", type="primary"):
+    if st.button("Generate Optimal Timetable", type="primary"):
         try:
-            # Run selected optimization
             if mode == "Smart Auto (Logical Optimization)":
-                results = logical_optimization(
-                    total_hours, subjects, names, priorities, min_times,
-                    energy_levels if enable_energy else None
-                )
+                results = logical_optimization(total_hours, subjects, names, priorities, min_times)
                 mode_name = "Smart Auto"
             elif mode == "Entropy (Softmax Distribution)":
-                results = entropy_distribution(
-                    total_hours, names, priorities, min_times,
-                    energy_levels if enable_energy else None
-                )
+                results = entropy_distribution(total_hours, names, priorities, min_times)
                 mode_name = "Entropy"
             else:
-                results = pareto_optimization(
-                    total_hours, subjects, names, priorities, min_times, difficulty_levels
-                )
+                results = pareto_optimization(total_hours, subjects, names, priorities, min_times, difficulty_levels)
                 mode_name = "Pareto"
 
             if not results:
                 return
 
-            # Display summary
             st.success(f"✅ Optimal Study Plan Generated ({mode_name})")
-            
+
             col1, col2, col3 = st.columns(3)
             with col1:
                 st.metric("Total Subjects", len(results))
@@ -248,47 +223,32 @@ def run():
                 utilization = (allocated / total_hours) * 100
                 st.metric("Time Utilization", f"{utilization:.1f}%")
 
-            # Results table
             st.subheader("📊 Study Allocation")
-            for subj, hrs, prio, energy in results:
-                energy_emoji = {"Low": "🟢", "Medium": "🟡", "High": "🔴"}.get(energy, "")
-                st.write(f"📖 **{subj}:** {hrs} hours | Priority: {'⭐' * prio} {energy_emoji}")
+            for subj, hrs, prio in results:
+                st.write(f"📖 **{subj}:** {hrs} hours | Priority: {'⭐' * prio}")
 
-            # Visualization
             col1, col2 = st.columns(2)
-            
             with col1:
-                # Pie chart
-                labels = [f"{r[0]}" for r in results]
+                labels = [r[0] for r in results]
                 sizes = [r[1] for r in results]
                 colors = plt.cm.Set3(range(len(results)))
-                
                 fig, ax = plt.subplots(figsize=(8, 6))
-                wedges, texts, autotexts = ax.pie(
-                    sizes, labels=labels, autopct='%1.1f%%',
-                    startangle=90, colors=colors
-                )
-                for autotext in autotexts:
-                    autotext.set_color('white')
-                    autotext.set_fontweight('bold')
+                ax.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=90, colors=colors)
                 ax.axis('equal')
                 plt.title('Time Distribution')
                 st.pyplot(fig)
-            
+
             with col2:
-                # Bar chart
                 fig, ax = plt.subplots(figsize=(8, 6))
                 subjects_names = [r[0] for r in results]
                 hours = [r[1] for r in results]
                 colors_bar = plt.cm.viridis(np.linspace(0, 1, len(results)))
-                
-                bars = ax.barh(subjects_names, hours, color=colors_bar)
+                ax.barh(subjects_names, hours, color=colors_bar)
                 ax.set_xlabel('Hours')
                 ax.set_title('Hours per Subject')
                 ax.grid(axis='x', alpha=0.3)
                 st.pyplot(fig)
 
-            # Time-blocked schedule
             if enable_schedule:
                 st.subheader("🕐 Time-Blocked Schedule")
                 schedule_start = datetime.combine(datetime.today(), start_time)
@@ -296,19 +256,14 @@ def run():
                 
                 for item in schedule:
                     if item['type'] == 'study':
-                        energy_badge = f" | {item['energy']}" if item['energy'] else ""
-                        st.info(f"**{item['start']} - {item['end']}**: {item['subject']} ({item['duration']} hrs){energy_badge}")
+                        st.info(f"**{item['start']} - {item['end']}**: {item['subject']} ({item['duration']} hrs)")
                     else:
                         st.success(f"**{item['start']} - {item['end']}**: {item['subject']} ({item['duration']} hrs)")
 
-            # Data table
-            df = pd.DataFrame(results, columns=["Subject", "Hours", "Priority", "Energy Level"])
-            df = df.drop(columns=["Energy Level"]) if not enable_energy else df
-            
+            df = pd.DataFrame(results, columns=["Subject", "Hours", "Priority"])
             st.subheader("📋 Summary Table")
             st.dataframe(df, use_container_width=True)
 
-            # Download
             csv = df.to_csv(index=False)
             st.download_button(
                 label="📥 Download Study Plan (CSV)",
@@ -317,7 +272,6 @@ def run():
                 mime="text/csv"
             )
 
-            # Insights
             st.subheader("💡 Insights")
             if mode == "Pareto (Multi-Objective Balance)":
                 st.info("Pareto optimization balances priority with difficulty—harder subjects with higher priority get proportionally more time.")
