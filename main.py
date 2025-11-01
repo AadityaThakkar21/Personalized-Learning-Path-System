@@ -133,6 +133,7 @@ with col1:
     <li><b>Study Group:</b> Recommends courses ideal groups based on variety of data points.</li>
     <li><b>Spaced Repetition:</b> Guides users on how to space their study routine</li>
     <li><b>Knowledge Gap Detector:</b> Identifies weak and strong subjects using past quiz data and predicts future performance to guide focused improvement.</li>
+    <li><b>Spaced Interval Scheduler:</b> Helps users know how often to revise a concept until the next quiz using ML algorithms.</li>
     </ol>
     """, unsafe_allow_html=True)
 
