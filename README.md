@@ -1,21 +1,53 @@
-# Personalized Learning Path System
+# 🎓 Personalized Learning Path System
 
-## Overview
-This project is a **Personalized Learning Path System**, developed as a group project for the IE402 course on Optimization. The system is designed to support learners by providing a streamlined and interactive learning experience with four main features: 
+### IE402 — Optimization Course Project  
+**Group Project | 2025**
 
-- **Timetable Creator:** Helps users create personalized study schedules.
-- **Quiz Maker:** Allows users to take quizzes to assess their knowledge.
-- **Leaderboard:** Displays user rankings to motivate and encourage progress.
+---
 
-The goal is to optimize the learning process through personalized recommendations and interactive modules.
+## 🧠 Overview
+The **Personalized Learning Path System** is a comprehensive academic optimization platform that enhances learning through **AI-driven analytics**, **personalized scheduling**, and **interactive performance tracking**.
 
-## Technologies Used
-- Python (as core programming language) & streamlit to build the frontend
-- Python libraries like pulp, pandas, scipy, etc
+It combines optimization techniques and machine learning models to **analyze performance**, **predict outcomes**, and **generate customized study plans** — empowering students to learn smarter and stay on track with their academic goals.
 
-## Group Members
-- 202301408	Vraj Patel
-- 202301417	Aaditya Thakkar	
-- 202301114	Yogesh Bagotia	
-- 202301065	Vansh padaliya	
-- 202301050	Siva Suhas Thatavarthy
+---
+
+## 🚀 Core Features
+
+### 🗓️ Timetable Creator
+Creates optimized, personalized study timetables based on user input, course load, and availability — ensuring efficient time management.
+
+### 🧩 Quiz Maker
+Allows learners to take quizzes on different subjects and difficulty levels to assess understanding and track their knowledge growth.
+
+### 🏆 Leaderboard
+Ranks students based on quiz performance and engagement, motivating consistent learning and friendly competition.
+
+### 🧮 AI-Powered Grade Tracker — *GradeLink Pro*
+An intelligent academic progress tracker that uses **machine learning and optimization** to monitor, predict, and enhance grades.
+
+### ⏰ Smart Revision Scheduler — *Spaced Repetition Engine*
+A **Machine Learning–based spaced repetition scheduler** that adapts to user performance and predicts optimal revision intervals.
+
+---
+
+## 🧑‍💻 Technologies Used
+| Category | Tools / Libraries |
+|-----------|-------------------|
+| **Language** | Python |
+| **Frontend** | Streamlit |
+| **Optimization** | PuLP, SciPy |
+| **Machine Learning** | scikit-learn |
+| **Data Handling** | pandas, numpy |
+| **Visualization** | Plotly, Matplotlib |
+| **Data Storage** | CSV / Pandas DataFrames |
+
+---
+
+## ⚙️ Installation & Usage
+
+### 🔧 Setup Instructions
+1. Clone this repository:
+   ```bash
+   git clone https://github.com/<your-username>/Personalized-Learning-Path-System.git
+   cd Personalized-Learning-Path-System
