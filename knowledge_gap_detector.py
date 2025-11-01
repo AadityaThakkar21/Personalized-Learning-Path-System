@@ -11,7 +11,7 @@ def run():
     st.set_page_config(page_title="Knowledge Gap Detector", layout="wide")
     st.title("🧩 Knowledge Gap & Performance Predictor")
 
-    st.write("Analyze your quiz results, identify weak areas, and predict your future performance.")
+    st.write("Analyze your quiz results, and predict your future performance.")
 
     # Load results file
     try:
