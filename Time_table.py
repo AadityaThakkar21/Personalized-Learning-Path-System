@@ -146,7 +146,7 @@ def schedule_with_breaks(results, start_time, break_interval=1.5, break_duration
 
 
 def run():
-    st.title("📅 Advanced Study Timetable Generator")
+    st.title("📅 Personalized Study Timetable Generator")
     st.markdown("*Optimize your study time with AI-powered scheduling*")
 
     # Sidebar
