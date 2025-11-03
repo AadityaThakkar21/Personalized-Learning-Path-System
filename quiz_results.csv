@@ -1,22 +1,4 @@
 timestamp,user_id,subject,difficulty,score,total,dataset,attempt_no,time_spent(mins)
-2025-10-19T12:00:00,101,Maths,Easy,1,5,quiz_data.csv,1,8
-2025-10-25T14:00:00,101,Maths,Intermediate,0,5,quiz_data.csv,2,3
-2025-10-14T18:00:00,101,Maths,Hard,0,5,quiz_data.csv,3,4
-2025-10-10T12:00:00,101,Maths,Hard,0,5,quiz_data.csv,4,7
-2025-10-04T15:00:00,101,Maths,Intermediate,0,5,quiz_data.csv,5,10
-2025-10-18T16:00:00,101,Science,Easy,1,5,quiz_data.csv,1,6
-2025-10-06T18:00:00,101,Science,Easy,2,5,quiz_data.csv,2,7
-2025-10-25T10:00:00,101,Science,Hard,2,5,quiz_data.csv,3,9
-2025-10-26T14:00:00,101,Science,Hard,2,5,quiz_data.csv,4,4
-2025-10-02T19:00:00,101,English,Intermediate,2,5,quiz_data.csv,1,4
-2025-10-09T10:00:00,101,English,Intermediate,1,5,quiz_data.csv,2,6
-2025-10-19T15:00:00,101,English,Easy,2,5,quiz_data.csv,3,6
-2025-10-07T18:00:00,101,English,Intermediate,2,5,quiz_data.csv,4,9
-2025-10-06T14:00:00,101,English,Intermediate,3,5,quiz_data.csv,5,9
-2025-10-09T09:00:00,101,Social Studies,Intermediate,2,5,quiz_data.csv,1,7
-2025-10-24T18:00:00,101,Social Studies,Intermediate,1,5,quiz_data.csv,2,6
-2025-10-06T20:00:00,101,Social Studies,Easy,2,5,quiz_data.csv,3,6
-2025-10-18T15:00:00,101,Social Studies,Easy,1,5,quiz_data.csv,4,7
 2025-10-12T20:00:00,102,Maths,Hard,3,5,quiz_data.csv,1,9
 2025-10-07T17:00:00,102,Maths,Hard,3,5,quiz_data.csv,2,10
 2025-10-12T13:00:00,102,Maths,Hard,2,5,quiz_data.csv,3,6
