@@ -267,3 +267,6 @@ Our system implements state-of-the-art optimization methods from operations rese
 | **Visualization** | Plotly, Matplotlib, Seaborn |
 | **Storage** | CSV, Pandas DataFrames, Pickle |
 | **Mathematical Modeling** | PuLP (LP/MILP solver) |
+
+## Deployed Website 
+https://personalized-learning-path-system.streamlit.app/
